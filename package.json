@@ -57,10 +57,5 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/GIStudio/SpatialHarness.git"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "esbuild"
-    ]
   }
 }
