@@ -1,0 +1,65 @@
+/**
+ * 数据源层协议：格式无关的导入/导出契约。
+ * 解析在 Web Worker 中执行（计算下发），UI 只通过 service 调用。
+ * 约定：返回的矢量几何已归一化为 EPSG:4326；原始坐标系记录在 sourceCrs。
+ */
+import type { Feature } from 'geojson'
+import type { FieldInfo } from '@/core/layers/model'
+
+export type SupportedFormat = 'geojson' | 'shp' | 'kml' | 'gpx' | 'geotiff' | 'csv'
+
+export interface ImportFile {
+  name: string
+  buffer: ArrayBuffer
+}
+
+export interface ParsedVectorData {
+  kind: 'vector'
+  /** 图层名（不含扩展名） */
+  name: string
+  format: SupportedFormat
+  features: Feature[]
+  fields: FieldInfo[]
+  /** 原始坐标系（如 EPSG:4490），几何已转换到 EPSG:4326 */
+  sourceCrs?: string
+  warnings: string[]
+}
+
+export interface ParsedRasterData {
+  kind: 'raster'
+  name: string
+  format: 'geotiff'
+  data: ArrayBuffer
+  width: number
+  height: number
+  bands: number
+  crs?: string
+  warnings: string[]
+}
+
+export type ParseResult = ParsedVectorData | ParsedRasterData
+
+export type ExportFormat = 'geojson' | 'csv' | 'kml'
+
+export interface ExportRequest {
+  features: Feature[]
+  format: ExportFormat
+  layerName: string
+  /** CSV 时经纬度字段名 */
+  lonField?: string
+  latField?: string
+}
+
+export interface ExportResult {
+  blob: Blob
+  fileName: string
+}
+
+/** Worker 暴露的 API（comlink 协议） */
+export interface DatasourceWorkerApi {
+  parseFiles(files: ImportFile[]): Promise<ParseResult[]>
+  exportVector(req: ExportRequest): Promise<ExportResult>
+}
+
+/** 工程目录内自动写入的数据文件布局（与 projectStore 约定一致） */
+export const ASSET_DIR = 'assets'

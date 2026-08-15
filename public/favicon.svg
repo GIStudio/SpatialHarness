@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="14" fill="#0d1117"/>
+  <!-- 空间网格（harness 骨架） -->
+  <path d="M12 20 H52 M12 32 H52 M12 44 H52 M20 12 V52 M32 12 V52 M44 12 V52" stroke="#1e2a3a" stroke-width="1.5"/>
+  <!-- 定位针（品牌主色） -->
+  <path d="M32 13 C23.5 13 17 19.5 17 28 C17 38.5 32 53 32 53 C32 53 47 38.5 47 28 C47 19.5 40.5 13 32 13 Z" fill="#3b82f6"/>
+  <circle cx="32" cy="28" r="6.5" fill="#0d1117" stroke="#93c5fd" stroke-width="2"/>
+</svg>
