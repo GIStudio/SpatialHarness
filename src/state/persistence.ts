@@ -7,6 +7,7 @@ import { useUiStore } from './ui'
 import * as engineBridge from './engineBridge'
 import * as fsAccess from '@/core/storage/fsAccess'
 import { saveProject, loadLatest, parseFromDisk, type ProjectFile } from '@/core/storage/projectStore'
+import { getProjectRecord } from '@/core/storage/idb'
 import { parseFiles as datasourceParse } from '@/core/datasource/service'
 import type { ImportFile } from '@/core/datasource/types'
 import { uid, inferLayerMeta } from '@/core/layers/model'
@@ -232,7 +233,6 @@ export async function openProjectFromDisk(): Promise<boolean> {
 
 /** 从浏览器内工程列表打开（按 id） */
 export async function openProjectById(id: string): Promise<boolean> {
-  const { getProjectRecord } = await import('@/core/storage/idb')
   const rec = await getProjectRecord(id)
   if (!rec) return false
   useProjectStore.getState().restoreFromSnapshot(rec.snapshot as ProjectFile)

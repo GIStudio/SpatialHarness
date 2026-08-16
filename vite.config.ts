@@ -30,6 +30,15 @@ export default defineConfig({
   build: {
     target: 'es2022',
     chunkSizeWarningLimit: 2000,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // OpenLayers 体积最大且版本稳定，单独分包利于浏览器缓存
+          'vendor-ol': ['ol'],
+          'vendor-react': ['react', 'react-dom'],
+        },
+      },
+    },
   },
   test: {
     environment: 'node',
