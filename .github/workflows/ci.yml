@@ -31,3 +31,15 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: MCP typecheck
+        run: pnpm mcp:typecheck
+
+      - name: MCP unit tests
+        run: pnpm mcp:test
+
+      - name: MCP build
+        run: pnpm mcp:build
+
+      - name: MCP smoke (stdio end-to-end)
+        run: pnpm mcp:smoke
