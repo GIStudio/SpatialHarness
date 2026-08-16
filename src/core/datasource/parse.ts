@@ -13,6 +13,7 @@ import { parseShapefile } from './formats/shp'
 import { parseKml, parseGpx } from './formats/kml'
 import { parseCsv } from './formats/csv'
 import { parseGeoTiff } from './formats/geotiff'
+import { parseGpkg } from './formats/gpkg'
 
 const SHAPE_EXT = new Set(['shp', 'dbf', 'shx', 'prj'])
 const RASTER_EXT = new Set(['tif', 'tiff', 'gtiff'])
@@ -58,6 +59,8 @@ export async function parseFiles(files: ImportFile[]): Promise<ParseResult[]> {
       singles.push({ file, fmt: 'geotiff' })
     } else if (ext === 'csv') {
       singles.push({ file, fmt: 'csv' })
+    } else if (ext === 'gpkg') {
+      singles.push({ file, fmt: 'gpkg' })
     } else if (ext === 'zip') {
       zipFiles.push(file)
     } else {
@@ -74,6 +77,7 @@ export async function parseFiles(files: ImportFile[]): Promise<ParseResult[]> {
       else if (fmt === 'gpx') results.push(parseGpx(decodeText(file.buffer), name))
       else if (fmt === 'csv') results.push(parseCsv(decodeText(file.buffer), name))
       else if (fmt === 'geotiff') results.push(await parseGeoTiff(file.buffer, name))
+      else if (fmt === 'gpkg') results.push(...(await parseGpkg(file.buffer, name)))
     } catch (err) {
       globalWarnings.push(`${file.name}: ${errMsg(err)}`)
     }

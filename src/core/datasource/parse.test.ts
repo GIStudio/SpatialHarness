@@ -210,14 +210,14 @@ describe('datasource parse', () => {
       { type: 'Feature', properties: { name: 'B', pop: 200 }, geometry: { type: 'Point', coordinates: [116.4, 39.95] } },
     ]
     // geojson
-    const gj = exportVector({ features, format: 'geojson', layerName: 'out' })
+    const gj = await exportVector({ features, format: 'geojson', layerName: 'out' })
     expect(gj.fileName).toBe('out.geojson')
     const parsed = JSON.parse(await gj.blob.text()) as { type: string; features: Feature[] }
     expect(parsed.type).toBe('FeatureCollection')
     expect(parsed.features).toHaveLength(2)
 
     // csv（点 → lon,lat 列）
-    const csv = exportVector({ features, format: 'csv', layerName: 'out' })
+    const csv = await exportVector({ features, format: 'csv', layerName: 'out' })
     expect(csv.fileName).toBe('out.csv')
     const csvText = await csv.blob.text()
     expect(csvText).toContain('name,pop,lon,lat')
@@ -229,7 +229,7 @@ describe('datasource parse', () => {
       properties: { name: 'L' },
       geometry: { type: 'LineString', coordinates: [[0, 0], [1, 1]] },
     }
-    const lc = exportVector({ features: [line], format: 'csv', layerName: 'line' })
+    const lc = await exportVector({ features: [line], format: 'csv', layerName: 'line' })
     expect((await lc.blob.text()).split('\n')[0]).toBe('name,WKT')
     expect(await lc.blob.text()).toContain('LINESTRING (0 0, 1 1)')
 
@@ -238,15 +238,27 @@ describe('datasource parse', () => {
       properties: {},
       geometry: { type: 'Polygon', coordinates: [[[0, 0], [2, 0], [2, 2], [0, 0]]] },
     }
-    const pc = exportVector({ features: [poly], format: 'csv', layerName: 'poly' })
+    const pc = await exportVector({ features: [poly], format: 'csv', layerName: 'poly' })
     expect(await pc.blob.text()).toContain('POLYGON ((0 0, 2 0, 2 2, 0 0))') // 未闭合自动补首点
 
     // kml
-    const kml = exportVector({ features, format: 'kml', layerName: 'out' })
+    const kml = await exportVector({ features, format: 'kml', layerName: 'out' })
     expect(kml.fileName).toBe('out.kml')
     const kmlText = await kml.blob.text()
     expect(kmlText).toContain('<kml xmlns="http://www.opengis.net/kml/2.2">')
     expect(kmlText).toContain('<Point><coordinates>116.3,39.9</coordinates></Point>')
     expect(kmlText).toContain('<Data name="name"><value>A</value></Data>')
+
+    // gpx（点 → wpt，线 → trk，面 → 外环 trk + 警告）
+    const gpx = await exportVector({ features, format: 'gpx', layerName: 'out' })
+    expect(gpx.fileName).toBe('out.gpx')
+    const gpxText = await gpx.blob.text()
+    expect(gpxText).toContain('<gpx version="1.1"')
+    expect(gpxText).toContain('<wpt lat="39.9" lon="116.3"><name>A</name></wpt>')
+    const gpxLine = await exportVector({ features: [line], format: 'gpx', layerName: 'l' })
+    expect(await gpxLine.blob.text()).toContain('<trk><name>L</name><trkseg>')
+    const gpxPoly = await exportVector({ features: [poly], format: 'gpx', layerName: 'p' })
+    expect(gpxPoly.warnings?.some((w) => w.includes('面'))).toBe(true)
+    expect(await gpxPoly.blob.text()).toContain('<trkseg>')
   })
 })

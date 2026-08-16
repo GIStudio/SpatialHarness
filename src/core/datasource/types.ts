@@ -6,7 +6,7 @@
 import type { Feature } from 'geojson'
 import type { FieldInfo } from '@/core/layers/model'
 
-export type SupportedFormat = 'geojson' | 'shp' | 'kml' | 'gpx' | 'geotiff' | 'csv'
+export type SupportedFormat = 'geojson' | 'shp' | 'kml' | 'gpx' | 'geotiff' | 'csv' | 'gpkg'
 
 export interface ImportFile {
   name: string
@@ -39,7 +39,7 @@ export interface ParsedRasterData {
 
 export type ParseResult = ParsedVectorData | ParsedRasterData
 
-export type ExportFormat = 'geojson' | 'csv' | 'kml' | 'shp'
+export type ExportFormat = 'geojson' | 'csv' | 'kml' | 'shp' | 'gpx' | 'gpkg'
 
 export interface ExportRequest {
   features: Feature[]

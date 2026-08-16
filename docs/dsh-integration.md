@@ -92,7 +92,7 @@ pnpm --filter @spatial-harness/mcp-server start    # 手动启动（等待客户
 
 | 工具 | 说明 |
 |---|---|
-| `convert_format` | 导出 GeoJSON / CSV（点带 lon,lat，线面带 WKT）/ KML 文本，或 Shapefile（`.zip` 打包 shp/shx/dbf/prj/cpg，UTF-8 属性，以 base64 返回） |
+| `convert_format` | 导出 GeoJSON / CSV（点带 lon,lat，线面带 WKT）/ KML / GPX 文本，或 Shapefile（`.zip` 打包 shp/shx/dbf/prj/cpg，UTF-8 属性）/ GeoPackage（`.gpkg`，SQLite），二进制以 base64 返回 |
 
 所有分析工具的图层引用支持两种方式：`layer_id`（推荐，已加载/已生成的数据集）或内联 `geojson`（FeatureCollection）。
 
@@ -114,6 +114,7 @@ pnpm --filter @spatial-harness/mcp-server start    # 手动启动（等待客户
 ## 已知限制
 
 - 栅格（GeoTIFF）仅返回元信息，不参与空间分析（与 Web 端一致，分析工具箱仅矢量）。
+- GeoPackage 经 sql.js WASM 读写（无原生依赖）：导入只解析要素表（瓦片/属性表忽略且不做坐标转换，非 4326 会告警）；导出为 EPSG:4326 单要素表。
 - `load_dataset` 的 `path` 仅支持单文件（`.shp` 自动带同主干名组件）；目录批量导入请逐个调用。
 - 会话数据集存在服务器进程内存中，DSH 重启后需重新 `load_dataset`。
 - 输入 `arguments` 缺失的调用（不符合 MCP 规范）会返回校验错误，不影响进程。

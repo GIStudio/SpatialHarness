@@ -44,8 +44,9 @@ pnpm build        # 类型检查 + 生产构建
 |---|---|---|---|
 | GeoJSON | ✅ | ✅ | 原生格式，编辑后可直接写回 |
 | Shapefile | ✅ | ✅ | 导入 `.shp + .dbf + .prj`（支持 `.zip` 包），自动坐标系归一化；导出为 `.zip`（shp/shx/dbf/prj/cpg 五件套，UTF-8 属性编码） |
+| GeoPackage | ✅ | ✅ | 纯 WASM（sql.js）读写，无原生依赖；多要素表导入为多图层，导出 EPSG:4326 单表 `.gpkg` |
 | KML | ✅ | ✅ | |
-| GPX | ✅ | ❌ | |
+| GPX | ✅ | ✅ | 导入 wpt/trk/rte；导出点 → wpt、线 → trk（面按外环转 trk 并告警） |
 | GeoTIFF | ✅ | ❌ | 栅格渲染（懒加载分块） |
 | CSV | ✅ | ✅ | 自动识别经纬度列 |
 | 工程文件 | ✅ | ✅ | `project.webgis.json`（含图层树/样式/视图/数据） |
@@ -65,8 +66,8 @@ UI 层（React 组件）            → Toolbar / LayerPanel / AttributeTable / 
 
 ## 🧪 验证
 
-- **单元测试**：Web 端 46 例（存储双轨往返、手写二进制 Shapefile fixture、Shapefile 导出→导入往返（含中文属性/面孔体/混合几何）、turf 空间分析含多要素叠加语义、WKT 解析）+ MCP 端 25 例
-- **冒烟测试**：`scripts/smoke_test.py`（Playwright）覆盖完整用户旅程：新建工程 → 导入 → 自动保存 → 识别 → 样式 → Shapefile 导出下载 → 分析 → 绘制 → 撤销/重做 → 刷新恢复
+- **单元测试**：Web 端 50 例（存储双轨往返、手写二进制 Shapefile fixture、Shapefile / GeoPackage 导出→导入往返（含中文属性/面孔体/混合几何）、GPX 导出结构、turf 空间分析含多要素叠加语义、WKT 解析）+ MCP 端 27 例
+- **冒烟测试**：`scripts/smoke_test.py`（Playwright）覆盖完整用户旅程：新建工程 → 导入 → 自动保存 → 识别 → 样式 → Shapefile/GPX/GeoPackage 导出下载 → 分析 → 绘制 → 撤销/重做 → 刷新恢复 → GeoPackage 导入回环
 
 ## 🤖 AI 可操作性（MCP）
 
@@ -91,7 +92,7 @@ pnpm --filter @spatial-harness/mcp-server build   # 生成 mcp/dist/server.cjs
 ## 🗺️ 路线图
 
 - 引擎：MapLibre GL 适配器、Cesium 3D
-- 格式：GeoPackage、GPX 导出、gdal3.js WASM 栅格处理
+- 格式：GeoPackage 瓦片表、gdal3.js WASM 栅格处理
 - 分析：网络分析、栅格计算器、热力图
 - 制图：打印布局、PNG 导出
 

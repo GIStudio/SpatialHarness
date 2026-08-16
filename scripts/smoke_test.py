@@ -106,6 +106,30 @@ with sync_playwright() as p:
     page.wait_for_timeout(600)  # 等待 React 提交状态栏 flash
     check('导出成功提示', page.get_by_text('已导出').count() > 0)
 
+    # 7.6 导出 GPX（wpt/trk 文本）
+    with page.expect_download() as dl_info:
+        page.get_by_title('导出图层').click()
+        page.wait_for_timeout(300)
+        page.get_by_role('button', name='GPX (.gpx)').click()
+    gpx_download = dl_info.value
+    gpx_path = '/tmp/smoke_export.gpx'
+    gpx_download.save_as(gpx_path)
+    with open(gpx_path, encoding='utf-8') as f:
+        gpx_head = f.read(200)
+    check('GPX 导出下载（gpx 头）', gpx_download.suggested_filename.endswith('.gpx') and '<gpx version="1.1"' in gpx_head)
+
+    # 7.7 导出 GeoPackage（SQLite WASM；首次调用触发 wasm 加载，可能稍慢）
+    with page.expect_download(timeout=60000) as dl_info:
+        page.get_by_title('导出图层').click()
+        page.wait_for_timeout(300)
+        page.get_by_role('button', name='GeoPackage (.gpkg)').click()
+    gpkg_download = dl_info.value
+    gpkg_path = '/tmp/smoke_export.gpkg'
+    gpkg_download.save_as(gpkg_path)
+    with open(gpkg_path, 'rb') as f:
+        gpkg_magic = f.read(2)
+    check('GeoPackage 导出下载（SQLite 魔数）', gpkg_download.suggested_filename.endswith('.gpkg') and gpkg_magic == b'SQ')
+
     # 8. 分析：缓冲区（图层A select 是 nth0，算子 select 是 nth1）
     page.get_by_role('button', name='分析', exact=True).click()
     page.wait_for_timeout(400)
@@ -144,6 +168,12 @@ with sync_playwright() as p:
     check('刷新后恢复 5 行', '共 5 行' in page.content())
     page.wait_for_timeout(2500)
     check('刷新后自动保存状态', page.get_by_text('已保存（仅浏览器内）').count() > 0)
+
+    # 11.5 GeoPackage 导入回环：把导出的 .gpkg 重新导入（worker WASM 解析路径）
+    # 导入图层名取文件主干名 smoke_export
+    page.set_input_files('input[type=file][accept*="geojson"]', gpkg_path)
+    page.wait_for_timeout(5000)
+    check('GeoPackage 导入回环（新图层出现）', page.get_by_text('smoke_export').count() > 0)
 
     # 12. 控制台错误
     severe = [e for e in console_errors if 'favicon' not in e.lower()]

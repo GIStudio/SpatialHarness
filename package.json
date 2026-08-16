@@ -17,6 +17,7 @@
     "mcp:typecheck": "pnpm --filter @spatial-harness/mcp-server typecheck"
   },
   "dependencies": {
+    "@ngageoint/geopackage": "^4.2.8",
     "@tailwindcss/vite": "^4.1.0",
     "@tmcw/togeojson": "^5.8.0",
     "@turf/area": "^7.2.0",
@@ -42,8 +43,10 @@
     "proj4": "^2.15.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "rtree-sql.js": "1.7.0",
     "shpjs": "^4.0.4",
     "tailwindcss": "^4.3.3",
+    "util": "^0.12.5",
     "zustand": "^5.0.5"
   },
   "devDependencies": {

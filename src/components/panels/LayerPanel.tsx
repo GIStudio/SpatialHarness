@@ -31,11 +31,13 @@ import type { ExportFormat, ImportFile } from '@/core/datasource/types'
 import { isVectorLayer } from '@/core/layers/model'
 import type { LayerModel } from '@/core/layers/model'
 
-const FILE_ACCEPT = '.geojson,.json,.shp,.dbf,.shx,.prj,.kml,.gpx,.tif,.tiff,.gtiff,.csv,.zip'
+const FILE_ACCEPT = '.geojson,.json,.shp,.dbf,.shx,.prj,.kml,.gpx,.tif,.tiff,.gtiff,.csv,.zip,.gpkg'
 
 const EXPORT_FORMATS: { format: ExportFormat; label: string }[] = [
   { format: 'geojson', label: 'GeoJSON (.geojson)' },
   { format: 'shp', label: 'Shapefile (.zip)' },
+  { format: 'gpkg', label: 'GeoPackage (.gpkg)' },
+  { format: 'gpx', label: 'GPX (.gpx)' },
   { format: 'csv', label: 'CSV (.csv)' },
   { format: 'kml', label: 'KML (.kml)' },
 ]

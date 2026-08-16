@@ -1,11 +1,12 @@
 /**
  * 矢量导出：geojson（美化 JSON）/ csv（点 → lon,lat 列；线/面 → WKT）/ kml（最小 KML 2.2）/
- * shp（Shapefile 五件套打包 .zip，UTF-8 属性）。
- * 均为纯字符串/字节构造，可在 Web Worker 中执行。
+ * shp（Shapefile 五件套打包 .zip，UTF-8 属性）/ gpx（wpt + trk）/ gpkg（GeoPackage，SQLite WASM）。
+ * 均为纯字符串/字节构造（gpkg 依赖 WASM，异步），可在 Web Worker 中执行。
  */
 import type { Feature, Geometry, Position } from 'geojson'
 import type { ExportRequest, ExportResult } from './types'
 import { buildShapefileZip, sanitizeFileStem, writeShapefileParts } from './formats/shpWrite'
+import { writeGpkg } from './formats/gpkg'
 
 /* ------------------------------ WKT（坐标 'x y' 空格分隔，环闭合，不含 Z） ------------------------------ */
 
@@ -183,9 +184,111 @@ function exportShp(features: Feature[], layerName: string): ExportResult {
   }
 }
 
+/* ------------------------------ GPX ------------------------------ */
+
+/** GPX 已知属性映射：其余属性不写入（GPX 1.1 无通用扩展约定） */
+const GPX_PROP_KEYS = ['name', 'desc', 'cmt', 'time', 'sym', 'src', 'type', 'ele'] as const
+
+function gpxPoint(p: Position): { lat: string; lon: string } {
+  return { lat: String(p[1]), lon: String(p[0]) }
+}
+
+function gpxPropsXml(props: Record<string, unknown>): string {
+  let xml = ''
+  for (const key of GPX_PROP_KEYS) {
+    const v = props[key]
+    if (v === undefined || v === null || v === '') continue
+    xml += `<${key}>${xmlEscape(String(v))}</${key}>`
+  }
+  return xml
+}
+
+/** 取要素中可用于 GPX 的属性（name/desc 等），几何无关 */
+function propsOf(f: Feature): Record<string, unknown> {
+  return (f.properties ?? {}) as Record<string, unknown>
+}
+
+function exportGpx(features: Feature[], layerName: string): ExportResult {
+  const warnings: string[] = []
+  const wpts: string[] = []
+  const trks: string[] = []
+
+  const addWaypoint = (p: Position, props: Record<string, unknown>) => {
+    const { lat, lon } = gpxPoint(p)
+    wpts.push(`<wpt lat="${lat}" lon="${lon}">${gpxPropsXml(props)}</wpt>`)
+  }
+  const addTrack = (segments: Position[][], props: Record<string, unknown>) => {
+    const segXml = segments
+      .map((seg) => `<trkseg>${seg.map((p) => {
+        const { lat, lon } = gpxPoint(p)
+        return `<trkpt lat="${lat}" lon="${lon}"></trkpt>`
+      }).join('')}</trkseg>`)
+      .join('')
+    trks.push(`<trk>${gpxPropsXml(props)}${segXml}</trk>`)
+  }
+
+  let polygonCount = 0
+  for (const f of features) {
+    const g = f.geometry
+    const props = propsOf(f)
+    if (!g) continue
+    switch (g.type) {
+      case 'Point':
+        addWaypoint(g.coordinates, props)
+        break
+      case 'MultiPoint':
+        for (const p of g.coordinates) addWaypoint(p, props)
+        break
+      case 'LineString':
+        addTrack([g.coordinates], props)
+        break
+      case 'MultiLineString':
+        addTrack(g.coordinates, props)
+        break
+      case 'Polygon':
+        // GPX 无面要素：外环导出为闭合轨迹，孔洞丢弃
+        polygonCount++
+        addTrack([g.coordinates[0]], props)
+        break
+      case 'MultiPolygon':
+        polygonCount++
+        addTrack(g.coordinates.map((poly) => poly[0]), props)
+        break
+      default:
+        break
+    }
+  }
+  if (polygonCount > 0) {
+    warnings.push(`GPX 不支持面要素：已将 ${polygonCount} 个面的外环导出为轨迹（trk），孔洞被丢弃`)
+  }
+
+  const body = [...wpts, ...trks].join('')
+  const xml =
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<gpx version="1.1" creator="SpatialHarness" xmlns="http://www.topografix.com/GPX/1/1">` +
+    `<metadata><name>${xmlEscape(layerName)}</name></metadata>` +
+    body +
+    `</gpx>`
+  return {
+    blob: new Blob([xml], { type: 'application/gpx+xml' }),
+    fileName: `${layerName}.gpx`,
+    warnings,
+  }
+}
+
+/* ------------------------------ GeoPackage ------------------------------ */
+
+async function exportGpkg(features: Feature[], layerName: string): Promise<ExportResult> {
+  const bytes = await writeGpkg(features, layerName)
+  return {
+    blob: new Blob([bytes], { type: 'application/geopackage+sqlite3' }),
+    fileName: `${layerName}.gpkg`,
+  }
+}
+
 /* ------------------------------ 入口 ------------------------------ */
 
-export function exportVector(req: ExportRequest): ExportResult {
+export async function exportVector(req: ExportRequest): Promise<ExportResult> {
   const { features, format } = req
   const layerName = sanitizeFileStem(req.layerName)
   if (format === 'geojson') {
@@ -197,5 +300,7 @@ export function exportVector(req: ExportRequest): ExportResult {
   }
   if (format === 'csv') return exportCsv(features, layerName)
   if (format === 'shp') return exportShp(features, layerName)
+  if (format === 'gpx') return exportGpx(features, layerName)
+  if (format === 'gpkg') return exportGpkg(features, layerName)
   return exportKml(features, layerName)
 }

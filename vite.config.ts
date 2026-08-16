@@ -7,11 +7,20 @@ import tailwindcss from '@tailwindcss/vite'
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, 'src'),
+    alias: [
+      { find: '@', replacement: path.resolve(__dirname, 'src') },
       // shpjs 顶层 require('buffer')：浏览器/Worker 中 polyfill
-      buffer: 'buffer/',
-    },
+      { find: 'buffer', replacement: 'buffer/' },
+      // GeoPackage 依赖 wkx 运行时用 util.inherits：Node 内置 util 被 externalize，
+      // 替换为 npm util shim（同 buffer 的处理方式）
+      { find: 'util', replacement: 'util/' },
+      // GeoPackage：原生 better-sqlite3 不可打包，替身为抛错 stub → 库回退 sql.js WASM
+      { find: 'better-sqlite3', replacement: path.resolve(__dirname, 'src/core/datasource/formats/betterSqlite3Stub.ts') },
+      // 强制 CJS lib 入口（绕开 browser 字段的 geopackage.min.js 预打包），
+      // 保证 Db/SqljsAdapter 与深路径 import 为同一模块实例。精确匹配，
+      // 避免误伤 `@ngageoint/geopackage/dist/sql-wasm.wasm?url` 资源导入。
+      { find: /^@ngageoint\/geopackage$/, replacement: '@ngageoint/geopackage/dist/index.js' },
+    ],
   },
   define: {
     // buffer polyfill 依赖的全局对象

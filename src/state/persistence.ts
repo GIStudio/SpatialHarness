@@ -64,7 +64,7 @@ export async function runSave(): Promise<void> {
 
 // ---------------- 导入服务 ----------------
 
-const SUPPORTED_EXTS = new Set(['.geojson', '.json', '.shp', '.dbf', '.shx', '.prj', '.kml', '.gpx', '.tif', '.tiff', '.gtiff', '.csv', '.zip'])
+const SUPPORTED_EXTS = new Set(['.geojson', '.json', '.shp', '.dbf', '.shx', '.prj', '.kml', '.gpx', '.tif', '.tiff', '.gtiff', '.csv', '.zip', '.gpkg'])
 
 function extOf(name: string): string {
   const i = name.lastIndexOf('.')

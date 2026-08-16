@@ -20,7 +20,7 @@ import {
 /* ------------------------------ 工具 ------------------------------ */
 
 async function roundtrip(features: Feature[], layerName = 'rt'): Promise<{ features: Feature[]; warnings: string[] }> {
-  const exported = exportVector({ features, format: 'shp', layerName })
+  const exported = await exportVector({ features, format: 'shp', layerName })
   expect(exported.fileName).toBe(`${layerName}.zip`)
   const buffer = await exported.blob.arrayBuffer()
   const results = await parseFiles([{ name: exported.fileName, buffer }])

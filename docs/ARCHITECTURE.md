@@ -69,7 +69,7 @@
 
 ## 6. Worker 计算（计算下发）
 
-- **datasource worker**：`parseFiles(files) → ParseResult[]`（GeoJSON/SHP/KML/GPX/GeoTIFF/CSV + 导出 geojson/csv/kml/shp，Shapefile 导出为 shp/shx/dbf/prj/cpg 打包 zip）。
+- **datasource worker**：`parseFiles(files) → ParseResult[]`（GeoJSON/SHP/KML/GPX/GeoTIFF/CSV/GeoPackage + 导出 geojson/csv/kml/shp/gpx/gpkg；Shapefile 导出为 shp/shx/dbf/prj/cpg 打包 zip，GeoPackage 经 sql.js WASM 读写）。
 - **analysis worker**：`runAnalysis(op, layers) → AnalysisOutcome`（buffer/intersect/union/difference/clip/dissolve/centroid/fieldStats/layerStats/bbox，turf v7）。
 - 通信协议均为 comlink；主线程侧封装在 `service.ts`，UI 只调 service。
 
@@ -95,7 +95,7 @@
 ## 9. 扩展路线图
 
 - **引擎**：MapLibre GL 适配器（矢量瓦片化渲染）、Cesium 3D
-- **格式**：GeoPackage、写入 Shapefile、gdal3.js WASM 栅格处理
+- **格式**：GeoPackage 瓦片表、gdal3.js WASM 栅格处理
 - **分析**：网络分析、栅格计算器、热力图（worker 内生成）
 - **计算下沉**：可选本地计算守护进程（HTTP/WebSocket），浏览器判断负载后转发重型任务
 - **制图输出**：打印布局 / 导出 PNG
