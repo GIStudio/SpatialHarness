@@ -259,10 +259,10 @@ export function registerTools(server: McpServer, store: DatasetStore): void {
     {
       title: '格式转换',
       description:
-        '把数据集或内联 GeoJSON 导出为 GeoJSON / CSV（点要素带 lon,lat 列，线面为 WKT 列）/ KML 文本。返回文本内容，可直接写入文件。',
+        '把数据集或内联 GeoJSON 导出为 GeoJSON / CSV（点要素带 lon,lat 列，线面为 WKT 列）/ KML 文本，或 Shapefile（.zip 打包 shp+shx+dbf+prj+cpg，以 base64 返回）。文本格式可直接写入文件。',
       inputSchema: {
         ...layerRef,
-        format: z.enum(['geojson', 'csv', 'kml']).describe('目标格式'),
+        format: z.enum(['geojson', 'csv', 'kml', 'shp']).describe('目标格式'),
         layer_name: z.string().optional().describe('导出文件基名（不含扩展名），默认用数据集名'),
       },
       annotations: { readOnlyHint: true },

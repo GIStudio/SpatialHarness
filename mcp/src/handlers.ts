@@ -303,22 +303,37 @@ export function handleLayerStats(store: DatasetStore, args: { layer_id?: string;
 
 /* ------------------------------ 导出 ------------------------------ */
 
+const TEXT_MAX = 1_000_000
+
 export async function handleConvertFormat(
   store: DatasetStore,
-  args: { layer_id?: string; geojson?: unknown; format: 'geojson' | 'csv' | 'kml'; layer_name?: string },
+  args: { layer_id?: string; geojson?: unknown; format: 'geojson' | 'csv' | 'kml' | 'shp'; layer_name?: string },
 ): Promise<ToolResult> {
-  if (!['geojson', 'csv', 'kml'].includes(args.format)) return errorResult('format 必须是 geojson / csv / kml')
+  if (!['geojson', 'csv', 'kml', 'shp'].includes(args.format)) return errorResult('format 必须是 geojson / csv / kml / shp')
   try {
     const ref = resolveFeatures(store, args)
     const layerName = args.layer_name ?? (args.layer_id ? store.get(args.layer_id)?.name : 'inline') ?? 'layer'
     const exported = exportVector({ features: ref.features, format: args.format, layerName })
+    const warnText = exported.warnings?.length ? `\n警告：${exported.warnings.join('；')}` : ''
+
+    if (args.format === 'shp') {
+      // 二进制 zip：以 base64 文本返回（shp/shx/dbf/prj/cpg 五件套，UTF-8 属性编码）
+      const bytes = new Uint8Array(await exported.blob.arrayBuffer())
+      const base64 = Buffer.from(bytes).toString('base64')
+      const shown = base64.length > TEXT_MAX ? base64.slice(0, TEXT_MAX) + `\n…（已截断，完整 base64 共 ${base64.length} 字符）` : base64
+      return textResult(
+        `已导出 ${exported.fileName}（${bytes.length} 字节，Shapefile = shp+shx+dbf+prj+cpg，属性 UTF-8 编码）${warnText}\nbase64：\n${shown}`,
+        { file_name: exported.fileName, format: 'shp', encoding: 'base64', byte_length: bytes.length, content: base64, warnings: exported.warnings ?? [] },
+      )
+    }
+
     const content = await exported.blob.text()
-    const MAX = 1_000_000
-    const shown = content.length > MAX ? content.slice(0, MAX) + `\n…（已截断，完整内容 ${content.length} 字符）` : content
-    return textResult(`已导出 ${exported.fileName}（${content.length} 字符）：\n${shown}`, {
+    const shown = content.length > TEXT_MAX ? content.slice(0, TEXT_MAX) + `\n…（已截断，完整内容 ${content.length} 字符）` : content
+    return textResult(`已导出 ${exported.fileName}（${content.length} 字符）：${warnText}\n${shown}`, {
       file_name: exported.fileName,
       format: args.format,
       content,
+      warnings: exported.warnings ?? [],
     })
   } catch (e) {
     return errorResult(e instanceof Error ? e.message : String(e))

@@ -311,4 +311,40 @@ describe('convert_format', () => {
     expect(r.isError).toBeUndefined()
     expect(r.structuredContent!.file_name).toBe('inline-layer.geojson')
   })
+
+  it('GeoJSON → Shapefile（zip 的 base64），解码后为合法 zip', async () => {
+    const store = new DatasetStore()
+    await loadInline(store, [square(0, 0, 10, 10, { name: '地块A', pop: 1200 })])
+    const r = await handleConvertFormat(store, { layer_id: 'L1', format: 'shp' })
+    expect(r.isError).toBeUndefined()
+    expect(r.structuredContent!.file_name).toBe('sample.zip')
+    expect(r.structuredContent!.encoding).toBe('base64')
+    const bytes = Buffer.from(r.structuredContent!.content as string, 'base64')
+    expect(bytes.length).toBeGreaterThan(150)
+    // ZIP 魔数 PK\x03\x04
+    expect(bytes[0]).toBe(0x50)
+    expect(bytes[1]).toBe(0x4b)
+    expect(bytes[2]).toBe(3)
+    expect(bytes[3]).toBe(4)
+    expect(resultText(r)).toContain('Shapefile = shp+shx+dbf+prj+cpg')
+  })
+
+  it('混合几何导出 shp 时携带跳过警告', async () => {
+    const store = new DatasetStore()
+    await loadInline(store, [
+      square(0, 0, 1, 1, { name: 'P' }),
+      { type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: [5, 5] } },
+    ])
+    const r = await handleConvertFormat(store, { layer_id: 'L1', format: 'shp' })
+    expect(r.isError).toBeUndefined()
+    const warnings = r.structuredContent!.warnings as string[]
+    expect(warnings.some((w) => w.includes('跳过'))).toBe(true)
+  })
+
+  it('未知格式报错', async () => {
+    const store = new DatasetStore()
+    const r = await handleConvertFormat(store, { layer_id: 'L1', format: 'gpkg' as 'shp' })
+    expect(r.isError).toBe(true)
+    expect(resultText(r)).toContain('geojson / csv / kml / shp')
+  })
 })
