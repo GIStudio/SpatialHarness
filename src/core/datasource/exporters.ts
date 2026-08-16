@@ -1,9 +1,11 @@
 /**
- * 矢量导出：geojson（美化 JSON）/ csv（点 → lon,lat 列；线/面 → WKT）/ kml（最小 KML 2.2）。
- * 均为纯字符串/Blob 构造，可在 Web Worker 中执行。
+ * 矢量导出：geojson（美化 JSON）/ csv（点 → lon,lat 列；线/面 → WKT）/ kml（最小 KML 2.2）/
+ * shp（Shapefile 五件套打包 .zip，UTF-8 属性）。
+ * 均为纯字符串/字节构造，可在 Web Worker 中执行。
  */
 import type { Feature, Geometry, Position } from 'geojson'
 import type { ExportRequest, ExportResult } from './types'
+import { buildShapefileZip, sanitizeFileStem, writeShapefileParts } from './formats/shpWrite'
 
 /* ------------------------------ WKT（坐标 'x y' 空格分隔，环闭合，不含 Z） ------------------------------ */
 
@@ -168,10 +170,24 @@ function exportKml(features: Feature[], layerName: string): ExportResult {
   }
 }
 
+/* ------------------------------ Shapefile ------------------------------ */
+
+function exportShp(features: Feature[], layerName: string): ExportResult {
+  const stem = sanitizeFileStem(layerName)
+  const parts = writeShapefileParts(features)
+  const zip = buildShapefileZip(parts, stem)
+  return {
+    blob: new Blob([zip], { type: 'application/zip' }),
+    fileName: `${stem}.zip`,
+    warnings: parts.warnings,
+  }
+}
+
 /* ------------------------------ 入口 ------------------------------ */
 
 export function exportVector(req: ExportRequest): ExportResult {
-  const { features, format, layerName } = req
+  const { features, format } = req
+  const layerName = sanitizeFileStem(req.layerName)
   if (format === 'geojson') {
     const json = JSON.stringify({ type: 'FeatureCollection', features }, null, 2)
     return {
@@ -180,5 +196,6 @@ export function exportVector(req: ExportRequest): ExportResult {
     }
   }
   if (format === 'csv') return exportCsv(features, layerName)
+  if (format === 'shp') return exportShp(features, layerName)
   return exportKml(features, layerName)
 }

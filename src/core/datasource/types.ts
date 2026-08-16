@@ -39,7 +39,7 @@ export interface ParsedRasterData {
 
 export type ParseResult = ParsedVectorData | ParsedRasterData
 
-export type ExportFormat = 'geojson' | 'csv' | 'kml'
+export type ExportFormat = 'geojson' | 'csv' | 'kml' | 'shp'
 
 export interface ExportRequest {
   features: Feature[]
@@ -53,6 +53,8 @@ export interface ExportRequest {
 export interface ExportResult {
   blob: Blob
   fileName: string
+  /** 导出过程中的非致命警告（如混合几何被跳过、字段名改写） */
+  warnings?: string[]
 }
 
 /** Worker 暴露的 API（comlink 协议） */
