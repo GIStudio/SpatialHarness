@@ -92,7 +92,7 @@ pnpm --filter @spatial-harness/mcp-server start    # 手动启动（等待客户
 
 | 工具 | 说明 |
 |---|---|
-| `convert_format` | 导出 GeoJSON / CSV（点带 lon,lat，线面带 WKT）/ KML 文本 |
+| `convert_format` | 导出 GeoJSON / CSV（点带 lon,lat，线面带 WKT）/ KML 文本，或 Shapefile（`.zip` 打包 shp/shx/dbf/prj/cpg，UTF-8 属性，以 base64 返回） |
 
 所有分析工具的图层引用支持两种方式：`layer_id`（推荐，已加载/已生成的数据集）或内联 `geojson`（FeatureCollection）。
 

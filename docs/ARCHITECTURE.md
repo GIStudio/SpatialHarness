@@ -69,7 +69,7 @@
 
 ## 6. Worker 计算（计算下发）
 
-- **datasource worker**：`parseFiles(files) → ParseResult[]`（GeoJSON/SHP/KML/GPX/GeoTIFF/CSV + 导出 geojson/csv/kml）。
+- **datasource worker**：`parseFiles(files) → ParseResult[]`（GeoJSON/SHP/KML/GPX/GeoTIFF/CSV + 导出 geojson/csv/kml/shp，Shapefile 导出为 shp/shx/dbf/prj/cpg 打包 zip）。
 - **analysis worker**：`runAnalysis(op, layers) → AnalysisOutcome`（buffer/intersect/union/difference/clip/dissolve/centroid/fieldStats/layerStats/bbox，turf v7）。
 - 通信协议均为 comlink；主线程侧封装在 `service.ts`，UI 只调 service。
 

@@ -92,6 +92,20 @@ with sync_playwright() as p:
     page.wait_for_timeout(500)
     check('样式面板打开', page.get_by_text('符号类型').count() > 0 or page.get_by_text('单一符号').count() > 0)
 
+    # 7.5 导出 Shapefile（zip 打包 shp/shx/dbf/prj/cpg）
+    with page.expect_download() as dl_info:
+        page.get_by_title('导出图层').click()
+        page.wait_for_timeout(300)
+        page.get_by_role('button', name='Shapefile (.zip)').click()
+    download = dl_info.value
+    export_path = '/tmp/smoke_export.zip'
+    download.save_as(export_path)
+    with open(export_path, 'rb') as f:
+        magic = f.read(2)
+    check('Shapefile 导出下载为 zip（PK 魔数）', download.suggested_filename.endswith('.zip') and magic == b'PK')
+    page.wait_for_timeout(600)  # 等待 React 提交状态栏 flash
+    check('导出成功提示', page.get_by_text('已导出').count() > 0)
+
     # 8. 分析：缓冲区（图层A select 是 nth0，算子 select 是 nth1）
     page.get_by_role('button', name='分析', exact=True).click()
     page.wait_for_timeout(400)
