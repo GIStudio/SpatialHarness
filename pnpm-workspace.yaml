@@ -1,5 +1,6 @@
 # pnpm 11 依赖构建脚本许可（package.json 的 pnpm 字段已被弃用）
 allowBuilds:
+  better-sqlite3: false  # 有意不构建原生模块：GeoPackage 走 sql.js WASM
   esbuild: true
 
 packages:

@@ -1,10 +1,13 @@
 /**
  * MCP 工具处理器单元测试（node env，直接调用 handlers，不经过 MCP 传输）。
  */
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
+import { createRequire } from 'node:module'
+import { readFileSync } from 'node:fs'
 import type { Feature } from 'geojson'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { DatasetStore } from './registry'
+import { configureGpkg } from '@/core/datasource/formats/gpkg'
 import {
   handleBbox,
   handleBuffer,
@@ -21,6 +24,13 @@ import {
   handleLoadDataset,
   handleUnloadDataset,
 } from './handlers'
+
+// GeoPackage 导出依赖 SQLite WASM：测试环境显式注入字节（生产由 index.ts 从 dist 读取）
+beforeAll(() => {
+  const require = createRequire(import.meta.url)
+  const wasmPath = require.resolve('rtree-sql.js/dist/sql-wasm.wasm')
+  configureGpkg({ wasmBytes: new Uint8Array(readFileSync(wasmPath)) })
+})
 
 /** 提取返回结果的文本内容（content 是联合类型，需窄化） */
 function resultText(r: CallToolResult): string {
@@ -343,8 +353,33 @@ describe('convert_format', () => {
 
   it('未知格式报错', async () => {
     const store = new DatasetStore()
-    const r = await handleConvertFormat(store, { layer_id: 'L1', format: 'gpkg' as 'shp' })
+    const r = await handleConvertFormat(store, { layer_id: 'L1', format: 'gpkg2' as 'shp' })
     expect(r.isError).toBe(true)
-    expect(resultText(r)).toContain('geojson / csv / kml / shp')
+    expect(resultText(r)).toContain('geojson / csv / kml / shp / gpx / gpkg')
+  })
+
+  it('GeoJSON → GPX（点 → wpt）', async () => {
+    const store = new DatasetStore()
+    await loadInline(store, [
+      { type: 'Feature', properties: { name: '北京' }, geometry: { type: 'Point', coordinates: [116.4, 39.9] } },
+    ], 'cities.geojson')
+    const r = await handleConvertFormat(store, { layer_id: 'L1', format: 'gpx' })
+    expect(r.isError).toBeUndefined()
+    expect(resultText(r)).toContain('<gpx version="1.1"')
+    expect(resultText(r)).toContain('<wpt lat="39.9" lon="116.4"><name>北京</name></wpt>')
+    expect(r.structuredContent!.file_name).toBe('cities.gpx')
+  })
+
+  it('GeoJSON → GeoPackage（SQLite base64），解码后为合法 SQLite', async () => {
+    const store = new DatasetStore()
+    await loadInline(store, [square(0, 0, 10, 10, { name: '地块A', pop: 1200 })])
+    const r = await handleConvertFormat(store, { layer_id: 'L1', format: 'gpkg' })
+    expect(r.isError).toBeUndefined()
+    expect(r.structuredContent!.file_name).toBe('sample.gpkg')
+    expect(r.structuredContent!.encoding).toBe('base64')
+    const bytes = Buffer.from(r.structuredContent!.content as string, 'base64')
+    // SQLite 魔数 "SQ"
+    expect(String.fromCharCode(bytes[0], bytes[1])).toBe('SQ')
+    expect(resultText(r)).toContain('GeoPackage')
   })
 })

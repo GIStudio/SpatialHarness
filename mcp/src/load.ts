@@ -86,10 +86,10 @@ export async function loadDataset(store: DatasetStore, args: { path?: string; na
   // MCP 侧需要明确的错误，这里兜底：
   if (results.length === 0) {
     const exts = [...new Set(files.map((f) => f.name.split('.').pop()?.toLowerCase() ?? ''))].filter(Boolean)
-    const supported = ['geojson', 'json', 'kml', 'gpx', 'csv', 'zip', 'shp', 'tif', 'tiff', 'gtiff']
+    const supported = ['geojson', 'json', 'kml', 'gpx', 'csv', 'zip', 'shp', 'tif', 'tiff', 'gtiff', 'gpkg']
     const unsupported = exts.filter((e) => !supported.includes(e))
     if (unsupported.length > 0) {
-      throw new Error(`不支持的文件类型：${unsupported.join(', ')}（支持 GeoJSON/KML/GPX/CSV/Shapefile/GeoTIFF）`)
+      throw new Error(`不支持的文件类型：${unsupported.join(', ')}（支持 GeoJSON/KML/GPX/CSV/Shapefile/GeoTIFF/GeoPackage）`)
     }
     throw new Error('解析失败：文件内容无法识别或数据为空（请检查文件格式与编码）')
   }

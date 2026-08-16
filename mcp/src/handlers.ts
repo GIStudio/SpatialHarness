@@ -307,23 +307,25 @@ const TEXT_MAX = 1_000_000
 
 export async function handleConvertFormat(
   store: DatasetStore,
-  args: { layer_id?: string; geojson?: unknown; format: 'geojson' | 'csv' | 'kml' | 'shp'; layer_name?: string },
+  args: { layer_id?: string; geojson?: unknown; format: 'geojson' | 'csv' | 'kml' | 'shp' | 'gpx' | 'gpkg'; layer_name?: string },
 ): Promise<ToolResult> {
-  if (!['geojson', 'csv', 'kml', 'shp'].includes(args.format)) return errorResult('format 必须是 geojson / csv / kml / shp')
+  if (!['geojson', 'csv', 'kml', 'shp', 'gpx', 'gpkg'].includes(args.format)) return errorResult('format 必须是 geojson / csv / kml / shp / gpx / gpkg')
   try {
     const ref = resolveFeatures(store, args)
     const layerName = args.layer_name ?? (args.layer_id ? store.get(args.layer_id)?.name : 'inline') ?? 'layer'
-    const exported = exportVector({ features: ref.features, format: args.format, layerName })
+    const exported = await exportVector({ features: ref.features, format: args.format, layerName })
     const warnText = exported.warnings?.length ? `\n警告：${exported.warnings.join('；')}` : ''
 
-    if (args.format === 'shp') {
-      // 二进制 zip：以 base64 文本返回（shp/shx/dbf/prj/cpg 五件套，UTF-8 属性编码）
+    if (args.format === 'shp' || args.format === 'gpkg') {
+      // 二进制（Shapefile zip / GeoPackage SQLite）：以 base64 文本返回
       const bytes = new Uint8Array(await exported.blob.arrayBuffer())
       const base64 = Buffer.from(bytes).toString('base64')
       const shown = base64.length > TEXT_MAX ? base64.slice(0, TEXT_MAX) + `\n…（已截断，完整 base64 共 ${base64.length} 字符）` : base64
+      const kindLabel =
+        args.format === 'shp' ? 'Shapefile = shp+shx+dbf+prj+cpg，属性 UTF-8 编码' : 'GeoPackage（SQLite，EPSG:4326）'
       return textResult(
-        `已导出 ${exported.fileName}（${bytes.length} 字节，Shapefile = shp+shx+dbf+prj+cpg，属性 UTF-8 编码）${warnText}\nbase64：\n${shown}`,
-        { file_name: exported.fileName, format: 'shp', encoding: 'base64', byte_length: bytes.length, content: base64, warnings: exported.warnings ?? [] },
+        `已导出 ${exported.fileName}（${bytes.length} 字节，${kindLabel}）${warnText}\nbase64：\n${shown}`,
+        { file_name: exported.fileName, format: args.format, encoding: 'base64', byte_length: bytes.length, content: base64, warnings: exported.warnings ?? [] },
       )
     }
 

@@ -98,6 +98,15 @@ try {
   const kml = await client.callTool({ name: 'convert_format', arguments: { layer_id: layerId, format: 'kml' } })
   console.log(`\n✅ convert_format（前 300 字符）：\n${textOf(kml).slice(0, 300)}`)
 
+  // 6.5 convert_format → GeoPackage（base64，校验 SQLite 魔数）
+  const gpkg = await client.callTool({ name: 'convert_format', arguments: { layer_id: layerId, format: 'gpkg' } })
+  const gpkgB64 = gpkg.structuredContent?.content ?? ''
+  const gpkgBytes = Buffer.from(gpkgB64, 'base64')
+  if (gpkg.isError || gpkgBytes.subarray(0, 2).toString() !== 'SQ') {
+    throw new Error(`convert_format gpkg 失败：${textOf(gpkg).slice(0, 200)}`)
+  }
+  console.log(`\n✅ convert_format → gpkg：${gpkgBytes.length} 字节（SQLite 魔数 OK）`)
+
   // 7. list_datasets（无参数工具需显式传空对象）
   const list = await client.callTool({ name: 'list_datasets', arguments: {} })
   console.log(`\n✅ list_datasets：\n${textOf(list)}`)

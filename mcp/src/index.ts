@@ -259,10 +259,10 @@ export function registerTools(server: McpServer, store: DatasetStore): void {
     {
       title: '格式转换',
       description:
-        '把数据集或内联 GeoJSON 导出为 GeoJSON / CSV（点要素带 lon,lat 列，线面为 WKT 列）/ KML 文本，或 Shapefile（.zip 打包 shp+shx+dbf+prj+cpg，以 base64 返回）。文本格式可直接写入文件。',
+        '把数据集或内联 GeoJSON 导出为 GeoJSON / CSV（点要素带 lon,lat 列，线面为 WKT 列）/ KML / GPX 文本，或 Shapefile（.zip 打包 shp+shx+dbf+prj+cpg）/ GeoPackage（.gpkg，SQLite），二进制格式以 base64 返回。文本格式可直接写入文件。',
       inputSchema: {
         ...layerRef,
-        format: z.enum(['geojson', 'csv', 'kml', 'shp']).describe('目标格式'),
+        format: z.enum(['geojson', 'csv', 'kml', 'shp', 'gpx', 'gpkg']).describe('目标格式'),
         layer_name: z.string().optional().describe('导出文件基名（不含扩展名），默认用数据集名'),
       },
       annotations: { readOnlyHint: true },
@@ -272,6 +272,13 @@ export function registerTools(server: McpServer, store: DatasetStore): void {
 }
 
 export async function main(): Promise<void> {
+  // GeoPackage 的 SQLite WASM：构建时复制到 dist/sql-wasm.wasm，随 server.cjs 分发
+  const { configureGpkg } = await import('@/core/datasource/formats/gpkg')
+  const fs = await import('node:fs')
+  const path = await import('node:path')
+  const wasmPath = path.join(__dirname, 'sql-wasm.wasm')
+  configureGpkg({ wasmBytes: new Uint8Array(fs.readFileSync(wasmPath)) })
+
   const server = new McpServer({ name: 'spatialharness', version: '0.1.0' })
   registerTools(server, new DatasetStore())
   const transport = new StdioServerTransport()
