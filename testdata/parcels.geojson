@@ -1,0 +1,20 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "name": "A", "landuse": "residential", "pop": 1200 },
+      "geometry": { "type": "Polygon", "coordinates": [[[113.20, 23.10], [113.25, 23.10], [113.25, 23.15], [113.20, 23.15], [113.20, 23.10]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "B", "landuse": "commercial", "pop": 800 },
+      "geometry": { "type": "Polygon", "coordinates": [[[113.24, 23.14], [113.28, 23.14], [113.28, 23.18], [113.24, 23.18], [113.24, 23.14]]] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "name": "C", "landuse": "residential", "pop": 2500 },
+      "geometry": { "type": "Polygon", "coordinates": [[[113.30, 23.05], [113.34, 23.05], [113.34, 23.09], [113.30, 23.09], [113.30, 23.05]]] }
+    }
+  ]
+}

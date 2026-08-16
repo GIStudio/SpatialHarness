@@ -68,6 +68,18 @@ UI 层（React 组件）            → Toolbar / LayerPanel / AttributeTable / 
 - **单元测试**：33 个用例（存储双轨往返、手写二进制 Shapefile fixture、turf 空间分析含多要素叠加语义、WKT 解析）
 - **冒烟测试**：`scripts/smoke_test.py`（Playwright）覆盖完整用户旅程：新建工程 → 导入 → 自动保存 → 识别 → 样式 → 分析 → 绘制 → 撤销/重做 → 刷新恢复
 
+## 🤖 AI 可操作性（MCP）
+
+SpatialHarness 以 **MCP 服务器**形式暴露给 AI 客户端（DeepSeek Harness / Claude Code / Codex 等）：
+空间分析（缓冲区/相交/联合/差集/裁剪/融合/质心/统计）与矢量数据解析（GeoJSON/Shapefile/KML/GPX/CSV）全部可被模型直接调用，逻辑与 Web 端同源（`src/core`）。
+
+```bash
+pnpm --filter @spatial-harness/mcp-server build   # 生成 mcp/dist/server.cjs
+```
+
+接入 DeepSeek Harness：在 `cordis.yml` 注册 `@deepseek-ai/dsh-mcp-client` 插件（stdio，`command: node`，`args: [<仓库>/mcp/dist/server.cjs]`）。
+完整说明与工具清单见 [docs/dsh-integration.md](docs/dsh-integration.md)。
+
 ## 🤝 贡献
 
 欢迎 PR。开发约定：

@@ -1,0 +1,29 @@
+{
+  "name": "@spatial-harness/mcp-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "SpatialHarness MCP 服务器：把 WebGIS 的空间分析与矢量数据解析能力以 MCP 工具暴露给 DeepSeek Harness 等 AI 客户端",
+  "bin": {
+    "spatialharness-mcp": "dist/server.cjs"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/build.mjs --watch",
+    "start": "node dist/server.cjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.16.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "~5.8.3",
+    "vitest": "^3.2.4"
+  },
+  "license": "MIT"
+}

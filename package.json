@@ -10,7 +10,11 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "mcp:build": "pnpm --filter @spatial-harness/mcp-server build",
+    "mcp:test": "pnpm --filter @spatial-harness/mcp-server test",
+    "mcp:smoke": "pnpm --filter @spatial-harness/mcp-server smoke",
+    "mcp:typecheck": "pnpm --filter @spatial-harness/mcp-server typecheck"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.0",

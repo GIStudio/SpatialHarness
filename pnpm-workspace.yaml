@@ -1,3 +1,6 @@
 # pnpm 11 依赖构建脚本许可（package.json 的 pnpm 字段已被弃用）
 allowBuilds:
   esbuild: true
+
+packages:
+  - mcp
