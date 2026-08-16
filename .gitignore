@@ -8,4 +8,5 @@ coverage
 .vite
 *.tsbuildinfo
 .pnpm-store
-*.tsbuildinfo
+.npm-cache
+.tmp-modlens
