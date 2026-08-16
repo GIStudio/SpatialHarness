@@ -35,6 +35,7 @@ const FILE_ACCEPT = '.geojson,.json,.shp,.dbf,.shx,.prj,.kml,.gpx,.tif,.tiff,.gt
 
 const EXPORT_FORMATS: { format: ExportFormat; label: string }[] = [
   { format: 'geojson', label: 'GeoJSON (.geojson)' },
+  { format: 'shp', label: 'Shapefile (.zip)' },
   { format: 'csv', label: 'CSV (.csv)' },
   { format: 'kml', label: 'KML (.kml)' },
 ]
@@ -301,7 +302,7 @@ function LayerDetails({ layer, onRemove }: { layer: LayerModel; onRemove: () => 
     setExportOpen(false)
     setExporting(true)
     try {
-      const { blob, fileName } = await exportVector({
+      const { blob, fileName, warnings } = await exportVector({
         features: vector.features,
         format,
         layerName: vector.name,
@@ -312,7 +313,9 @@ function LayerDetails({ layer, onRemove }: { layer: LayerModel; onRemove: () => 
       a.download = fileName
       a.click()
       setTimeout(() => URL.revokeObjectURL(url), 1000)
-      flash(`已导出 ${fileName}`, 'ok')
+      // 单条 flash 合并成功信息与警告（statusMessage 槽位唯一，连续 flash 会互相覆盖）
+      if (warnings && warnings.length > 0) flash(`已导出 ${fileName}（${warnings.join('；')}）`, 'warn')
+      else flash(`已导出 ${fileName}`, 'ok')
     } catch (e) {
       flash(`导出失败: ${String(e)}`, 'error')
     } finally {
