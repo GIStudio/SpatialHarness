@@ -5,6 +5,7 @@
  *  - 数据集管理：load_dataset / list_datasets / get_dataset / unload_dataset
  *  - 空间分析：buffer / intersect / union / difference / clip / dissolve / centroid / bbox / field_stats / layer_stats
  *  - 格式导出：convert_format
+ *  - 栅格处理（GDAL WASM）：raster_info / raster_translate / raster_warp
  *
  * 复用 Web 端 src/core 的解析与分析逻辑（turf 纯函数，Node 兼容）。
  * 运行：node dist/server.cjs（stdio 传输，配合 DSH 的 @deepseek-ai/dsh-mcp-client 插件）。
@@ -24,6 +25,9 @@ import {
   handleFieldStats,
   handleGetDataset,
   handleIntersect,
+  handleRasterInfo,
+  handleRasterTranslate,
+  handleRasterWarp,
   handleLayerStats,
   handleListDatasets,
   handleLoadDataset,
@@ -269,15 +273,73 @@ export function registerTools(server: McpServer, store: DatasetStore): void {
     },
     (args) => handleConvertFormat(store, args),
   )
+
+  server.registerTool(
+    'raster_info',
+    {
+      title: '栅格信息',
+      description: '读取本地栅格文件（GeoTIFF/PNG/JPEG 等）的元信息：尺寸、波段数、驱动、坐标系、四角经纬度。path=本地文件路径，或 data+name 传入文件内容。',
+      inputSchema: {
+        path: z.string().optional().describe('本地栅格文件路径'),
+        data: z.string().optional().describe('文件内容（与 name 配合）'),
+        name: z.string().optional().describe('文件名（含扩展名，用 data 时必填）'),
+        encoding: z.enum(['utf8', 'base64']).optional().describe('data 的编码方式，默认 utf8'),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    (args) => handleRasterInfo(store, args),
+  )
+
+  server.registerTool(
+    'raster_translate',
+    {
+      title: '栅格转换（gdal_translate）',
+      description: '用 GDAL 转换栅格格式/重采样（gdal_translate 参数，如 ["-of","PNG"] 转 PNG、["-of","GTiff","-outsize","50%","50%"] 缩小）。二进制结果以 base64 返回。',
+      inputSchema: {
+        path: z.string().optional().describe('本地栅格文件路径'),
+        data: z.string().optional().describe('文件内容（与 name 配合）'),
+        name: z.string().optional().describe('文件名（含扩展名，用 data 时必填）'),
+        encoding: z.enum(['utf8', 'base64']).optional().describe('data 的编码方式，默认 utf8'),
+        options: z.array(z.string()).describe('gdal_translate 命令行参数'),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    (args) => handleRasterTranslate(store, args),
+  )
+
+  server.registerTool(
+    'raster_warp',
+    {
+      title: '栅格重投影（gdalwarp）',
+      description: '用 GDAL 重投影/配准栅格（gdalwarp 参数，如 ["-t_srs","EPSG:4326"]、["-of","GTiff"]）。二进制结果以 base64 返回。',
+      inputSchema: {
+        path: z.string().optional().describe('本地栅格文件路径'),
+        data: z.string().optional().describe('文件内容（与 name 配合）'),
+        name: z.string().optional().describe('文件名（含扩展名，用 data 时必填）'),
+        encoding: z.enum(['utf8', 'base64']).optional().describe('data 的编码方式，默认 utf8'),
+        options: z.array(z.string()).describe('gdalwarp 命令行参数'),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    (args) => handleRasterWarp(store, args),
+  )
 }
 
 export async function main(): Promise<void> {
   // GeoPackage 的 SQLite WASM：构建时复制到 dist/sql-wasm.wasm，随 server.cjs 分发
   const { configureGpkg } = await import('@/core/datasource/formats/gpkg')
+  const { configureGdal } = await import('@/core/raster/gdalService')
   const fs = await import('node:fs')
   const path = await import('node:path')
   const wasmPath = path.join(__dirname, 'sql-wasm.wasm')
   configureGpkg({ wasmBytes: new Uint8Array(fs.readFileSync(wasmPath)) })
+  // GDAL 的 wasm/data：构建时复制到 dist/，Node 端定位（打包后 node_modules 路径不可用）。
+  // gdal3.js/node 的 getPreloadedPackage 会在路径前硬编码 './'，因此这里用相对 CWD 的路径
+  configureGdal({
+    wasmUrl: path.relative(process.cwd(), path.join(__dirname, 'gdal3WebAssembly.wasm')),
+    dataUrl: path.relative(process.cwd(), path.join(__dirname, 'gdal3WebAssembly.data')),
+    jsUrl: path.relative(process.cwd(), path.join(__dirname, 'gdal3.js')),
+  })
 
   const server = new McpServer({ name: 'spatialharness', version: '0.1.0' })
   registerTools(server, new DatasetStore())

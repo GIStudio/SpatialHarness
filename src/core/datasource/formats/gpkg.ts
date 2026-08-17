@@ -9,8 +9,9 @@
  * 非 4326 的 SRS 仅记录 warning。
  */
 import type { Feature } from 'geojson'
-import type { ParsedVectorData } from '../types'
+import type { ParseResult } from '../types'
 import { inferLayerMeta } from '@/core/layers/model'
+import { readTileTable, writeGpkgTiles, type GeoPackageTilesLike } from './gpkgTiles'
 
 export interface GpkgWasmConfig {
   /** 浏览器：sql-wasm.wasm 资源 URL（交给 locateFile，fetch 加载） */
@@ -44,12 +45,15 @@ interface GeoPackageLike {
   addGeoJSONFeaturesToGeoPackage(features: Feature[], table: string, index: boolean): Promise<number>
   export(): Promise<Uint8Array>
   getFeatureTables(): string[]
+  getTileTables(): string[]
+  getTileDao(table: string): unknown
   queryForGeoJSONFeaturesInTable(table: string): Feature[]
   close(): void
 }
 
 interface GpkgRuntime {
   GeoPackageAPI: { create(path?: string): Promise<GeoPackageLike>; open(bytes: Uint8Array): Promise<GeoPackageLike> }
+  BoundingBox: new (minLongitude: number, maxLongitude: number, minLatitude: number, maxLatitude: number) => unknown
 }
 
 async function ensureReady(): Promise<GpkgRuntime> {
@@ -77,6 +81,20 @@ async function ensureReady(): Promise<GpkgRuntime> {
         // 显式装配：sql.js 适配器 + 空 canvas（覆盖库内环境检测，兼容 ESM 模块工人）
         ;(gpkg.SqljsAdapter as unknown as { SQL?: unknown }).SQL = SQL
         dbModule.Db.registerDbAdapter(gpkg.SqljsAdapter as never)
+        // 兼容性补丁：SqljsAdapter.insert 缺少 bindAndInsert 里的 undefined→null 守卫，
+        // sql.js 对未定义绑定值直接抛错（如 TileDao.create 未设置自增主键 id 时）
+        const SqljsAdapterCtor = gpkg.SqljsAdapter as unknown as {
+          prototype: { insert: (sql: string, params: Record<string, unknown>) => unknown }
+        }
+        const origInsert = SqljsAdapterCtor.prototype.insert
+        SqljsAdapterCtor.prototype.insert = function (this: unknown, sql: string, params: Record<string, unknown>) {
+          if (params && !Array.isArray(params)) {
+            for (const key of Object.keys(params)) {
+              if (params[key] === undefined) params[key] = null
+            }
+          }
+          return origInsert.call(this, sql, params)
+        }
         gpkg.Canvas.registerCanvasAdapter(NoopCanvasAdapter as never)
         return gpkg as unknown as GpkgRuntime
       } finally {
@@ -147,43 +165,82 @@ export async function writeGpkg(features: Feature[], layerName: string): Promise
   }
 }
 
+/** 将整图（PNG）+ 4326 bbox 写入 GeoPackage 瓦片表（EPSG:3857 XYZ） */
+export async function writeGpkgTilesFromImage(pngBytes: Uint8Array, bbox4326: [number, number, number, number], layerName: string): Promise<Uint8Array> {
+  const { GeoPackageAPI, BoundingBox } = await ensureReady()
+  const tableName = sanitizeGpkgTableName(layerName)
+  return writeGpkgTiles(
+    () => GeoPackageAPI.create() as unknown as Promise<GeoPackageTilesLike>,
+    (minX, maxX, minY, maxY) => new BoundingBox(minX, maxX, minY, maxY),
+    pngBytes,
+    bbox4326,
+    tableName,
+  )
+}
+
 /* ------------------------------ 读取 ------------------------------ */
 
-/** 解析 GeoPackage：每个要素表一个图层；无要素表时返回带 warning 的空结果 */
-export async function parseGpkg(buffer: ArrayBuffer, stem: string): Promise<ParsedVectorData[]> {
+/**
+ * 解析 GeoPackage：
+ * - 每个要素表 → 一个矢量图层
+ * - 每个瓦片表 → 读取并组装为整图栅格图层（kind='image'，PNG + 4326 bbox）
+ */
+export async function parseGpkg(buffer: ArrayBuffer, stem: string): Promise<ParseResult[]> {
   const { GeoPackageAPI } = await ensureReady()
   const gp = await GeoPackageAPI.open(new Uint8Array(buffer))
   try {
-    const tables = gp.getFeatureTables()
-    if (tables.length === 0) {
-      return [
-        {
-          kind: 'vector',
-          name: stem,
-          format: 'gpkg',
-          features: [],
-          fields: [],
-          warnings: ['GeoPackage 中没有要素表（可能仅含瓦片/属性表）'],
-        },
-      ]
-    }
-    const multi = tables.length > 1
-    return tables.map((table) => {
+    const results: ParseResult[] = []
+    const featureTables = gp.getFeatureTables()
+    const multi = featureTables.length > 1
+    for (const table of featureTables) {
       const features = gp.queryForGeoJSONFeaturesInTable(table).map((f, i) => {
         // 读回会带主键列 id（非用户属性），剥离；要素 id 保留行号
         const props = { ...(f.properties ?? {}) } as Record<string, unknown>
         delete props.id
         return { ...f, id: f.id ?? i, properties: props } as Feature
       })
-      return {
+      results.push({
         kind: 'vector',
         name: multi ? `${stem}.${table}` : stem,
         format: 'gpkg' as const,
         features,
         fields: inferLayerMeta(features).fields,
         warnings: [],
-      }
-    })
+      })
+    }
+
+    // 瓦片表：组装为整图（最高可用层级），PNG + bbox
+    const tileTables = gp.getTileTables()
+    const tileMulti = tileTables.length > 1 || featureTables.length > 0
+    for (const table of tileTables) {
+      const assembled = readTileTable(gp as never, table)
+      if (!assembled) continue
+      const bytes = assembled.pngBytes.buffer.slice(assembled.pngBytes.byteOffset, assembled.pngBytes.byteOffset + assembled.pngBytes.byteLength)
+      results.push({
+        kind: 'raster',
+        name: tileMulti ? `${stem}.${table}` : stem,
+        format: 'gpkg-tiles' as const,
+        data: bytes as ArrayBuffer,
+        width: assembled.width,
+        height: assembled.height,
+        bands: 4,
+        crs: 'EPSG:4326',
+        bbox: assembled.bbox,
+        warnings: assembled.warnings,
+      })
+    }
+
+    if (results.length === 0) {
+      results.push({
+        kind: 'vector',
+        name: stem,
+        format: 'gpkg',
+        features: [],
+        fields: [],
+        warnings: ['GeoPackage 中没有要素表/瓦片表（可能仅含属性表）'],
+      })
+    }
+    return results
   } finally {
     gp.close()
   }

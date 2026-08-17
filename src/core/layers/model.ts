@@ -53,15 +53,18 @@ export interface VectorLayerModel extends BaseLayerModel {
 export interface RasterLayerModel extends BaseLayerModel {
   kind: 'raster'
   source: {
-    kind: 'geotiff'
+    /** geotiff：GeoTIFF 字节；image：组装整图（PNG 字节 + 4326 bbox） */
+    kind: 'geotiff' | 'image'
     data: ArrayBuffer
     crs?: string
     width?: number
     height?: number
     bands?: number
+    /** kind='image' 时的 EPSG:4326 bbox [minLon, minLat, maxLon, maxLat] */
+    bbox?: [number, number, number, number]
   }
   sourceFile?: LocalFileRef
-  format?: 'geotiff'
+  format?: 'geotiff' | 'gpkg'
 }
 
 export type LayerModel = VectorLayerModel | RasterLayerModel

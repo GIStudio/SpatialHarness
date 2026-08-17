@@ -8,6 +8,7 @@ import type { Feature } from 'geojson'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 import { DatasetStore } from './registry'
 import { configureGpkg } from '@/core/datasource/formats/gpkg'
+import { buildGeoTiff } from '@/core/datasource/geotiffFixture'
 import {
   handleBbox,
   handleBuffer,
@@ -22,14 +23,28 @@ import {
   handleLayerStats,
   handleListDatasets,
   handleLoadDataset,
+  handleRasterInfo,
+  handleRasterTranslate,
+  handleRasterWarp,
   handleUnloadDataset,
 } from './handlers'
 
 // GeoPackage 导出依赖 SQLite WASM：测试环境显式注入字节（生产由 index.ts 从 dist 读取）
-beforeAll(() => {
+beforeAll(async () => {
   const require = createRequire(import.meta.url)
   const wasmPath = require.resolve('rtree-sql.js/dist/sql-wasm.wasm')
   configureGpkg({ wasmBytes: new Uint8Array(readFileSync(wasmPath)) })
+  // GDAL：指向 node_modules 内的真实资产（vitest CWD 在 mcp/，默认相对路径不可达）
+  const { configureGdal } = await import('@/core/raster/gdalService')
+  const pathMod = await import('node:path')
+  const gdalJs = require.resolve('gdal3.js/dist/package/gdal3.js')
+  const gdalDir = gdalJs.slice(0, gdalJs.lastIndexOf('/') + 1)
+  // gdal3.js/node 的 getPreloadedPackage 硬编码 './' 前缀 → 用相对 CWD 的路径
+  configureGdal({
+    wasmUrl: pathMod.relative(process.cwd(), gdalDir + 'gdal3WebAssembly.wasm'),
+    dataUrl: pathMod.relative(process.cwd(), gdalDir + 'gdal3WebAssembly.data'),
+    jsUrl: pathMod.relative(process.cwd(), gdalJs),
+  })
 })
 
 /** 提取返回结果的文本内容（content 是联合类型，需窄化） */
@@ -368,6 +383,49 @@ describe('convert_format', () => {
     expect(resultText(r)).toContain('<gpx version="1.1"')
     expect(resultText(r)).toContain('<wpt lat="39.9" lon="116.4"><name>北京</name></wpt>')
     expect(r.structuredContent!.file_name).toBe('cities.gpx')
+  })
+
+  it('raster_info：尺寸/波段/坐标系', async () => {
+    const r = await handleRasterInfo(new DatasetStore(), {
+      data: Buffer.from(buildGeoTiff({ width: 8, height: 8 })).toString('base64'),
+      name: 'mini.tif',
+      encoding: 'base64',
+    })
+    expect(r.isError).toBeUndefined()
+    const info = r.structuredContent as Record<string, unknown>
+    expect(info.width).toBe(8)
+    expect(info.height).toBe(8)
+    expect(info.bandCount).toBe(1)
+  }, 120000)
+
+  it('raster_translate：GeoTIFF → PNG（base64）', async () => {
+    const r = await handleRasterTranslate(new DatasetStore(), {
+      data: Buffer.from(buildGeoTiff({ width: 8, height: 8 })).toString('base64'),
+      name: 'mini.tif',
+      encoding: 'base64',
+      options: ['-of', 'PNG'],
+    })
+    expect(r.isError).toBeUndefined()
+    const bytes = Buffer.from(r.structuredContent!.content as string, 'base64')
+    expect(bytes.subarray(1, 4).toString()).toBe('PNG')
+  }, 120000)
+
+  it('raster_warp：重投影到 EPSG:3857（TIFF base64）', async () => {
+    const r = await handleRasterWarp(new DatasetStore(), {
+      data: Buffer.from(buildGeoTiff({ width: 8, height: 8 })).toString('base64'),
+      name: 'mini.tif',
+      encoding: 'base64',
+      options: ['-of', 'GTiff', '-t_srs', 'EPSG:3857'],
+    })
+    expect(r.isError).toBeUndefined()
+    const bytes = Buffer.from(r.structuredContent!.content as string, 'base64')
+    expect(bytes.subarray(0, 2).toString()).toBe('II')
+  }, 120000)
+
+  it('raster 参数校验：path 与 data 同时缺失', async () => {
+    const r = await handleRasterInfo(new DatasetStore(), {})
+    expect(r.isError).toBe(true)
+    expect(resultText(r)).toContain('path 与 data')
   })
 
   it('GeoJSON → GeoPackage（SQLite base64），解码后为合法 SQLite', async () => {

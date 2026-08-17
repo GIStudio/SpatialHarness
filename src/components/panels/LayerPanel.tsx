@@ -28,8 +28,8 @@ import { engineFitToLayer } from '@/state/engineBridge'
 import { importBuffers, importFromDirectory } from '@/state/persistence'
 import { exportVector } from '@/core/datasource/service'
 import type { ExportFormat, ImportFile } from '@/core/datasource/types'
-import { isVectorLayer } from '@/core/layers/model'
-import type { LayerModel } from '@/core/layers/model'
+import { isRasterLayer, isVectorLayer, uid } from '@/core/layers/model'
+import type { LayerModel, RasterLayerModel } from '@/core/layers/model'
 
 const FILE_ACCEPT = '.geojson,.json,.shp,.dbf,.shx,.prj,.kml,.gpx,.tif,.tiff,.gtiff,.csv,.zip,.gpkg'
 
@@ -294,10 +294,22 @@ function LayerRow({
 
 function LayerDetails({ layer, onRemove }: { layer: LayerModel; onRemove: () => void }) {
   const updateLayer = useProjectStore((s) => s.updateLayer)
+  const addLayer = useProjectStore((s) => s.addLayer)
   const flash = useUiStore((s) => s.flash)
   const [exportOpen, setExportOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
   const vector = isVectorLayer(layer) ? layer : null
+  const raster = isRasterLayer(layer) ? layer : null
+
+  const downloadBlob = async (blob: Blob, fileName: string) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = fileName
+    a.click()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+    flash(`已导出 ${fileName}`, 'ok')
+  }
 
   const doExport = async (format: ExportFormat) => {
     if (!vector) return
@@ -325,6 +337,77 @@ function LayerDetails({ layer, onRemove }: { layer: LayerModel; onRemove: () => 
     }
   }
 
+  /** 栅格导出/处理：原始数据 / PNG（GDAL）/ 重投影 / GeoPackage 瓦片 */
+  const rasterActions: { key: string; label: string; run: () => Promise<void> }[] = raster
+    ? [
+        {
+          key: 'raw',
+          label: raster.source.kind === 'image' ? '导出整图 (.png)' : '导出 GeoTIFF (.tif)',
+          run: async () => {
+            const ext = raster.source.kind === 'image' ? 'png' : 'tif'
+            const mime = raster.source.kind === 'image' ? 'image/png' : 'image/tiff'
+            await downloadBlob(new Blob([raster.source.data], { type: mime }), `${raster.name}.${ext}`)
+          },
+        },
+        {
+          key: 'png',
+          label: '导出 PNG（GDAL 转换）',
+          run: async () => {
+            const { rasterTranslate } = await import('@/core/raster/service')
+            const out = await rasterTranslate(raster.name, new Uint8Array(raster.source.data), ['-of', 'PNG'])
+            await downloadBlob(new Blob([out.bytes], { type: 'image/png' }), out.fileName)
+          },
+        },
+        {
+          key: 'reproject',
+          label: '重投影到 EPSG:4326（GDAL）',
+          run: async () => {
+            const { rasterWarp } = await import('@/core/raster/service')
+            const out = await rasterWarp(raster.name, new Uint8Array(raster.source.data), ['-of', 'GTiff', '-t_srs', 'EPSG:4326'])
+            const warped: RasterLayerModel = {
+              id: uid('lyr'),
+              name: `${raster.name}_4326`,
+              kind: 'raster',
+              visible: true,
+              opacity: 1,
+              zIndex: useProjectStore.getState().layers.length,
+              source: { kind: 'geotiff', data: out.bytes.buffer.slice(out.bytes.byteOffset, out.bytes.byteOffset + out.bytes.byteLength) as ArrayBuffer, crs: 'EPSG:4326' },
+              format: 'geotiff',
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            }
+            addLayer(warped)
+            flash(`已添加重投影图层 ${warped.name}`, 'ok')
+          },
+        },
+        {
+          key: 'tiles',
+          label: '导出 GeoPackage 瓦片 (.gpkg)',
+          run: async () => {
+            const { exportGpkgTiles } = await import('@/core/datasource/service')
+            let png = new Uint8Array(raster.source.data)
+            let bbox = raster.source.bbox
+            if (raster.source.kind === 'geotiff' || !bbox) {
+              // GeoTIFF 或缺少 bbox：先经 GDAL 拿四角 + 转 PNG
+              const { rasterInfo, rasterTranslate } = await import('@/core/raster/service')
+              const info = await rasterInfo(raster.name, new Uint8Array(raster.source.data))
+              const corners = info.corners
+              if (!corners || corners.length < 2) throw new Error('无法从栅格解析外包矩形')
+              bbox = [corners[0][0], corners[3][1], corners[1][0], corners[0][1]]
+              const pngOut = await rasterTranslate(raster.name, new Uint8Array(raster.source.data), ['-of', 'PNG'])
+              png = pngOut.bytes
+            }
+            const gpkg = await exportGpkgTiles({ pngBytes: png, bbox, layerName: raster.name })
+            await downloadBlob(new Blob([gpkg], { type: 'application/geopackage+sqlite3' }), `${raster.name}.gpkg`)
+          },
+        },
+      ]
+    : []
+
+  const menuItems = vector
+    ? EXPORT_FORMATS.map((f) => ({ key: f.format, label: f.label, run: () => doExport(f.format) }))
+    : rasterActions
+
   return (
     <div className="shrink-0 space-y-2 border-t border-border bg-panel-2 p-2">
       <div className="flex items-center gap-1">
@@ -334,25 +417,32 @@ function LayerDetails({ layer, onRemove }: { layer: LayerModel; onRemove: () => 
         <IconButton title="移除图层" icon={<Trash2 size={13} />} onClick={onRemove} />
         <div className="relative">
           <IconButton
-            title={vector ? '导出图层' : '仅矢量图层可导出'}
+            title={vector || raster ? '导出图层' : '仅矢量/栅格图层可导出'}
             icon={<Download size={13} />}
-            disabled={!vector || exporting}
+            disabled={(!vector && !raster) || exporting}
             active={exportOpen}
             onClick={() => setExportOpen((o) => !o)}
           />
           {exportOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setExportOpen(false)} />
-              <div className="absolute bottom-full right-0 z-50 mb-1 w-40 overflow-hidden rounded-md border border-border bg-panel-2 shadow-xl">
-                {EXPORT_FORMATS.map((f) => (
+              <div className="absolute bottom-full right-0 z-50 mb-1 w-52 overflow-hidden rounded-md border border-border bg-panel-2 shadow-xl">
+                {menuItems.map((item) => (
                   <button
-                    key={f.format}
+                    key={item.key}
                     type="button"
-                    onClick={() => void doExport(f.format)}
+                    onClick={() => {
+                      setExportOpen(false)
+                      setExporting(true)
+                      void item
+                        .run()
+                        .catch((e: unknown) => flash(`操作失败: ${String(e)}`, 'error'))
+                        .finally(() => setExporting(false))
+                    }}
                     className="flex w-full items-center gap-1.5 px-2 py-1.5 text-left text-xs text-text-dim hover:bg-panel-3 hover:text-text"
                   >
                     <Download size={12} className="shrink-0 text-text-faint" />
-                    <span className="flex-1 truncate">{f.label}</span>
+                    <span className="flex-1 truncate">{item.label}</span>
                   </button>
                 ))}
               </div>

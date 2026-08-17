@@ -26,6 +26,10 @@ export default defineConfig({
     // buffer polyfill 依赖的全局对象
     global: 'globalThis',
   },
+  optimizeDeps: {
+    // gdal3.js 的 ?url 资产（wasm/data/js）不能被预打包成模块，否则 dev 下地址失效
+    exclude: ['gdal3.js'],
+  },
   worker: {
     // geotiff 内部动态 import 与默认 iife 冲突：合并为单 chunk
     rollupOptions: {

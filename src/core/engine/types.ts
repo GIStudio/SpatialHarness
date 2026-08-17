@@ -58,10 +58,13 @@ export interface VectorLayerSpec {
 }
 
 export interface RasterSourceSpec {
-  kind: 'geotiff'
-  /** GeoTIFF 二进制数据 */
+  /** geotiff：GeoTIFF 字节流；image：已组装的整图（PNG）+ 4326 bbox（如 GeoPackage 瓦片表） */
+  kind: 'geotiff' | 'image'
+  /** 栅格二进制数据 */
   data: ArrayBuffer | Blob
   crs?: string
+  /** kind='image' 时的 EPSG:4326 bbox [minLon, minLat, maxLon, maxLat] */
+  bbox?: [number, number, number, number]
 }
 
 export interface RasterLayerSpec {

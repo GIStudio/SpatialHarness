@@ -94,6 +94,14 @@ pnpm --filter @spatial-harness/mcp-server start    # 手动启动（等待客户
 |---|---|
 | `convert_format` | 导出 GeoJSON / CSV（点带 lon,lat，线面带 WKT）/ KML / GPX 文本，或 Shapefile（`.zip` 打包 shp/shx/dbf/prj/cpg，UTF-8 属性）/ GeoPackage（`.gpkg`，SQLite），二进制以 base64 返回 |
 
+### 栅格处理（GDAL WASM）
+
+| 工具 | 说明 |
+|---|---|
+| `raster_info` | 栅格元信息（尺寸/波段/驱动/坐标系/四角经纬度），`path` 或 `data`+`name` 传入 |
+| `raster_translate` | gdal_translate：格式转换/重采样（如 `["-of","PNG"]`），结果 base64 返回 |
+| `raster_warp` | gdalwarp：重投影/配准（如 `["-t_srs","EPSG:4326"]`），结果 base64 返回 |
+
 所有分析工具的图层引用支持两种方式：`layer_id`（推荐，已加载/已生成的数据集）或内联 `geojson`（FeatureCollection）。
 
 ## 使用示例

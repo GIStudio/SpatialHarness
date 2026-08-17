@@ -341,3 +341,81 @@ export async function handleConvertFormat(
     return errorResult(e instanceof Error ? e.message : String(e))
   }
 }
+
+/* ------------------------------ 栅格处理（GDAL WASM） ------------------------------ */
+
+export async function handleRasterInfo(
+  _store: DatasetStore,
+  args: { path?: string; data?: string; name?: string; encoding?: string },
+): Promise<ToolResult> {
+  try {
+    const { bytes, name } = await readRasterInput(args)
+    const { gdalInfo } = await import('@/core/raster/gdalService')
+    const info = await gdalInfo(name, bytes)
+    const lines = [
+      `栅格信息：${name}`,
+      `尺寸 ${info.width}×${info.height} · ${info.bandCount ?? 1} 波段 · 驱动 ${info.driverName ?? '未知'}`,
+      info.projectionWkt ? `坐标系：${info.projectionWkt.slice(0, 80)}${info.projectionWkt.length > 80 ? '…' : ''}` : '坐标系：无',
+      info.corners ? `四角（lon,lat）：${info.corners.map((c) => `[${c[0].toFixed(6)}, ${c[1].toFixed(6)}]`).join(' ') }` : '',
+    ]
+    return textResult(lines.filter(Boolean).join('\n'), { name, ...info })
+  } catch (e) {
+    return errorResult(e instanceof Error ? e.message : String(e))
+  }
+}
+
+export async function handleRasterTranslate(
+  _store: DatasetStore,
+  args: { path?: string; data?: string; name?: string; encoding?: string; options: string[] },
+): Promise<ToolResult> {
+  return runRasterGdal('gdal_translate', args, 'raster_translate')
+}
+
+export async function handleRasterWarp(
+  _store: DatasetStore,
+  args: { path?: string; data?: string; name?: string; encoding?: string; options: string[] },
+): Promise<ToolResult> {
+  return runRasterGdal('gdal_warp', args, 'raster_warp')
+}
+
+async function readRasterInput(args: { path?: string; data?: string; name?: string; encoding?: string }): Promise<{ bytes: Uint8Array; name: string }> {
+  const hasPath = typeof args.path === 'string' && args.path.length > 0
+  const hasData = typeof args.data === 'string' && args.data.length > 0
+  if (hasPath === hasData) {
+    throw new Error('path 与 data 必须且只能提供一个：path=本地栅格文件路径，或 data=文件内容（name 指定文件名）')
+  }
+  if (hasPath) {
+    const fs = await import('node:fs/promises')
+    const path = await import('node:path')
+    const abs = path.resolve(args.path!)
+    const buf = await fs.readFile(abs)
+    return { bytes: new Uint8Array(buf), name: path.basename(abs) }
+  }
+  if (!args.name) throw new Error('使用 data 时必须提供 name（含扩展名，如 data.tif）')
+  const raw = (args.encoding ?? 'utf8') === 'base64' ? Buffer.from(args.data!, 'base64') : Buffer.from(args.data!, 'utf8')
+  return { bytes: new Uint8Array(raw), name: args.name }
+}
+
+async function runRasterGdal(
+  app: 'gdal_translate' | 'gdal_warp',
+  args: { path?: string; data?: string; name?: string; encoding?: string; options: string[] },
+  toolName: string,
+): Promise<ToolResult> {
+  try {
+    const { bytes, name } = await readRasterInput(args)
+    const opts = Array.isArray(args.options) ? args.options.map(String) : []
+    const { gdalTranslate, gdalWarp } = await import('@/core/raster/gdalService')
+    const out = app === 'gdal_translate' ? await gdalTranslate(name, bytes, opts) : await gdalWarp(name, bytes, opts)
+    const b64 = Buffer.from(out.bytes).toString('base64')
+    const shown = b64.length > TEXT_MAX ? b64.slice(0, TEXT_MAX) + `\n…（已截断，完整 base64 共 ${b64.length} 字符）` : b64
+    return textResult(`已生成 ${out.fileName}（${out.bytes.length} 字节）\nbase64：\n${shown}`, {
+      file_name: out.fileName,
+      tool: toolName,
+      encoding: 'base64',
+      byte_length: out.bytes.length,
+      content: b64,
+    })
+  } catch (e) {
+    return errorResult(e instanceof Error ? e.message : String(e))
+  }
+}

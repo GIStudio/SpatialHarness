@@ -24,6 +24,9 @@ const watch = process.argv.includes('--watch')
 // 定位 rtree-sql.js 的 sql-wasm.wasm（从 Web 端 src 可解析到该包）
 const wasmSrc = require.resolve('rtree-sql.js/dist/sql-wasm.wasm', { paths: [webSrc] })
 const wasmDest = path.join(root, 'dist', 'sql-wasm.wasm')
+// GDAL 的 wasm + 数据（gdal3.js/node 构建按 __dirname 定位这两个文件）
+const gdalDir = path.dirname(require.resolve('gdal3.js/dist/package/gdal3.node.js', { paths: [webSrc] }))
+const gdalAssets = ['gdal3WebAssembly.wasm', 'gdal3WebAssembly.data'].map((f) => ({ src: path.join(gdalDir, f), dest: path.join(root, 'dist', f) }))
 
 /** @type {import('esbuild').BuildOptions} */
 const options = {
@@ -46,6 +49,7 @@ const options = {
 function copyWasm() {
   fs.mkdirSync(path.dirname(wasmDest), { recursive: true })
   fs.copyFileSync(wasmSrc, wasmDest)
+  for (const a of gdalAssets) fs.copyFileSync(a.src, a.dest)
 }
 
 if (watch) {
@@ -56,5 +60,5 @@ if (watch) {
 } else {
   await esbuild.build(options)
   copyWasm()
-  console.log('[spatialharness-mcp] built → dist/server.cjs (+ sql-wasm.wasm)')
+  console.log('[spatialharness-mcp] built → dist/server.cjs (+ sql-wasm.wasm + gdal wasm/data)')
 }

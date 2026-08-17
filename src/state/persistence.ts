@@ -114,6 +114,7 @@ function toLayerModel(parsed: Awaited<ReturnType<typeof datasourceParse>>[number
     }
     return layer
   }
+  const isTileImage = parsed.format === 'gpkg-tiles' && parsed.bbox
   const layer: RasterLayerModel = {
     id: uid('lyr'),
     name: parsed.name,
@@ -121,8 +122,10 @@ function toLayerModel(parsed: Awaited<ReturnType<typeof datasourceParse>>[number
     visible: true,
     opacity: 1,
     zIndex: index,
-    source: { kind: 'geotiff', data: parsed.data, crs: parsed.crs, width: parsed.width, height: parsed.height, bands: parsed.bands },
-    format: 'geotiff',
+    source: isTileImage
+      ? { kind: 'image', data: parsed.data, crs: parsed.crs, bbox: parsed.bbox }
+      : { kind: 'geotiff', data: parsed.data, crs: parsed.crs, width: parsed.width, height: parsed.height, bands: parsed.bands },
+    format: isTileImage ? 'gpkg' : 'geotiff',
     createdAt: Date.now(),
     updatedAt: Date.now(),
   }

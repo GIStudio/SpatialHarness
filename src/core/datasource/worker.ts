@@ -5,10 +5,10 @@
 // 必须最先导入：GeoPackage 栈运行时需要全局 Buffer/process（早于任何库代码执行）
 import './nodeShims'
 import * as Comlink from 'comlink'
-import type { DatasourceWorkerApi } from './types'
+import type { DatasourceWorkerApi, GpkgTilesRequest } from './types'
 import { parseFiles } from './parse'
 import { exportVector } from './exporters'
-import { configureGpkg } from './formats/gpkg'
+import { configureGpkg, writeGpkgTilesFromImage } from './formats/gpkg'
 // GeoPackage 所需的 SQLite WASM：作为静态资源由 Vite 发射，worker 内 fetch 加载
 import gpkgWasmUrl from '@ngageoint/geopackage/dist/sql-wasm.wasm?url'
 
@@ -17,6 +17,7 @@ configureGpkg({ wasmUrl: gpkgWasmUrl })
 const api: DatasourceWorkerApi = {
   parseFiles,
   exportVector,
+  exportGpkgTiles: async (req: GpkgTilesRequest) => writeGpkgTilesFromImage(req.pngBytes, req.bbox, req.layerName),
 }
 
 Comlink.expose(api)

@@ -33,6 +33,8 @@ describe('geopackage 读写', () => {
     const layers = await parseGpkg(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), 'demo')
     expect(layers).toHaveLength(1)
     const r = layers[0]
+    expect(r.kind).toBe('vector')
+    if (r.kind !== 'vector') throw new Error('应为矢量结果')
     expect(r.name).toBe('demo')
     expect(r.format).toBe('gpkg')
     expect(r.features).toHaveLength(3)
@@ -69,6 +71,9 @@ describe('geopackage 读写', () => {
     const bytes = await writeGpkg([], 'empty')
     const layers = await parseGpkg(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength), 'empty')
     expect(layers).toHaveLength(1)
-    expect(layers[0].features).toHaveLength(0)
+    const r = layers[0]
+    expect(r.kind).toBe('vector')
+    if (r.kind !== 'vector') throw new Error('应为矢量结果')
+    expect(r.features).toHaveLength(0)
   })
 })

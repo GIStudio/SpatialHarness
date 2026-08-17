@@ -65,7 +65,7 @@ function addLayerToEngine(layerId: string) {
     engine.addRasterLayer({
       id: layer.id,
       name: layer.name,
-      source: { kind: 'geotiff', data: layer.source.data, crs: layer.source.crs },
+      source: { kind: layer.source.kind, data: layer.source.data, crs: layer.source.crs, bbox: layer.source.bbox },
       visible: layer.visible,
       opacity: layer.opacity,
     })
