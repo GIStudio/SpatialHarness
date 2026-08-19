@@ -192,6 +192,7 @@ export function attachEngine(e: MapEngine): void {
   unsubs.push(
     useProjectStore.subscribe((state, prev) => {
       if (state.layers !== prev.layers || state.layerRev !== prev.layerRev) syncLayersDiff()
+      if (state.basemap !== prev.basemap) engine?.setBasemap(state.basemap)
     }),
   )
   unsubs.push(
@@ -222,6 +223,7 @@ export function attachEngine(e: MapEngine): void {
 function syncAll() {
   if (!engine) return
   const s = useProjectStore.getState()
+  engine.setBasemap(s.basemap)
   for (const layer of s.layers) addLayerToEngine(layer.id)
   s.layers.forEach((l, i) => engine!.setLayerZIndex(l.id, i))
   const sel = useSelectionStore.getState()

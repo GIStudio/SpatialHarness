@@ -8,6 +8,7 @@ import { attachEngine, detachEngine } from '@/state/engineBridge'
 import { useProjectStore } from '@/state/project'
 import { useUiStore, isDrawTool } from '@/state/ui'
 import { toWebMercator } from '@/core/geo/transform'
+import { LegendOverlay } from './LegendOverlay'
 
 export function MapView() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -45,6 +46,7 @@ export function MapView() {
 
   return (
     <div className="absolute inset-0" ref={containerRef}>
+      <LegendOverlay />
       {isDrawTool(tool) && (
         <div className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 rounded-md bg-black/75 px-3 py-1.5 text-xs text-white shadow-lg">
           {tool === 'draw-point'

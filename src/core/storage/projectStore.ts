@@ -5,7 +5,7 @@
  *   额外写 project.webgis.json（raster 数据转 base64 { __bin }）与 assets/<layerId>.tif。
  *   磁盘失败不影响 idb 成功。
  */
-import type { ViewState } from '@/core/engine/types'
+import type { BasemapId, ViewState } from '@/core/engine/types'
 import { isRasterLayer, type LayerModel } from '@/core/layers/model'
 import * as fsAccess from './fsAccess'
 import { deleteProjectRecord, listProjectRecords, saveProjectRecord } from './idb'
@@ -18,6 +18,8 @@ export interface ProjectFile {
   createdAt: number
   updatedAt: number
   view: ViewState | null
+  /** 在线底图（可选，向后兼容旧工程文件） */
+  basemap?: BasemapId
   crs: 'EPSG:3857'
   layerOrder: string[]
   layers: LayerModel[]

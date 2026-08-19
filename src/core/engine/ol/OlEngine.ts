@@ -18,9 +18,11 @@ import type { EventsKey } from 'ol/events'
 import type { Layer } from 'ol/layer'
 import type { Feature as GeoFeature } from 'geojson'
 import type {
+  BasemapId,
   DrawGeometryType,
   EngineEventMap,
   EngineFeature,
+  ExportPngOptions,
   MapEngine,
   RasterLayerSpec,
   VectorLayerSpec,
@@ -29,6 +31,8 @@ import type {
 import type { LayerStyle } from '@/core/style/types'
 import { createStyleFunction, DRAW_STYLES } from './style'
 import { buildRasterLayer } from './raster'
+import { basemapEntry, createBasemapLayer } from './basemap'
+import { exportMapPng } from './export'
 
 type AnyHandler = (payload: never) => void
 
@@ -51,6 +55,8 @@ export class OlEngine implements MapEngine {
   private vectorLayers = new globalThis.Map<string, VectorEntry>()
   private rasterLayers = new globalThis.Map<string, { layer: Layer }>()
   private selection = new globalThis.Map<string, Set<string>>()
+  private basemapId: BasemapId = 'none'
+  private basemapLayer: Layer | null = null
   private draw: Draw | null = null
   private modify: Modify | null = null
   private listeners: (() => void)[] = []
@@ -80,6 +86,11 @@ export class OlEngine implements MapEngine {
     const map = new OlMap({ target, view, layers: [] })
     this.map = map
     this.view = view
+    // 恢复底图（mount 重建地图时）
+    if (this.basemapId !== 'none') {
+      this.basemapLayer = createBasemapLayer(this.basemapId)
+      if (this.basemapLayer) map.addLayer(this.basemapLayer)
+    }
     const keys: EventsKey[] = []
     keys.push(
       map.on('singleclick', (evt) => {
@@ -114,6 +125,32 @@ export class OlEngine implements MapEngine {
     this.vectorLayers.clear()
     this.rasterLayers.clear()
     this.selection.clear()
+    this.basemapLayer = null
+  }
+
+  // ---------------- 底图与导出 ----------------
+
+  setBasemap(id: BasemapId): void {
+    this.basemapId = id
+    if (this.basemapLayer) {
+      this.map?.removeLayer(this.basemapLayer)
+      this.basemapLayer = null
+    }
+    if (!this.map || id === 'none') return
+    this.basemapLayer = createBasemapLayer(id)
+    if (this.basemapLayer) this.map.addLayer(this.basemapLayer)
+  }
+
+  getBasemap(): BasemapId {
+    return this.basemapId
+  }
+
+  exportPng(options: ExportPngOptions = {}): Promise<Blob> {
+    if (!this.map) return Promise.reject(new Error('地图尚未挂载'))
+    // 自动补上当前底图的版权说明
+    const entry = basemapEntry(this.basemapId)
+    const attribution = [options.attribution, entry?.attribution].filter(Boolean).join(' · ')
+    return exportMapPng(this.map, { ...options, attribution: attribution || undefined })
   }
 
   // ---------------- 图层管理 ----------------

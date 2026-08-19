@@ -13,6 +13,7 @@ import {
   CloudOff,
   Layers as LayersIcon,
   FlaskConical,
+  Sparkles,
 } from 'lucide-react'
 import { Toolbar } from './Toolbar'
 import { StatusBar } from './StatusBar'
@@ -32,7 +33,12 @@ import {
   openProjectById,
   pushViewToEngine,
 } from '@/state/persistence'
+import { loadDemoScenario } from '@/state/demo'
 import { listProjects } from '@/core/storage/projectStore'
+import { DemoGallery } from './DemoGallery'
+
+/** 启动流程只执行一次（React StrictMode 双调用会导致恢复与示例加载竞态） */
+let bootStarted = false
 
 export function AppShell() {
   const [showNew, setShowNew] = useState(false)
@@ -43,8 +49,14 @@ export function AppShell() {
   const rightOpen = useUiStore((s) => s.rightOpen)
 
   useEffect(() => {
+    if (bootStarted) return
+    bootStarted = true
     startAutosave()
-    void bootApp()
+    void bootApp().then(() => {
+      // URL 参数 ?demo=<场景id>：直接载入示例（演示/截图自动化用）
+      const demoId = new URLSearchParams(window.location.search).get('demo')
+      if (demoId) void loadDemoScenario(demoId)
+    })
   }, [])
 
   return (
@@ -94,6 +106,7 @@ export function AppShell() {
 function Welcome({ onNew, onOpen }: { onNew: () => void; onOpen: () => void }) {
   const flash = useUiStore((s) => s.flash)
   const diskProjectAvailable = useUiStore((s) => s.diskProjectAvailable)
+  const [showDemos, setShowDemos] = useState(false)
 
   const ensureProject = () => {
     if (!useProjectStore.getState().projectId) {
@@ -168,10 +181,14 @@ function Welcome({ onNew, onOpen }: { onNew: () => void; onOpen: () => void }) {
           >
             打开数据文件夹
           </Button>
+          <Button size="md" variant="outline" icon={<Sparkles size={15} />} onClick={() => setShowDemos(true)}>
+            打开示例库
+          </Button>
         </div>
         <p className="mt-4 text-center text-[11px] text-text-faint">
           支持 GeoJSON / Shapefile / KML / GPX / GeoTIFF / CSV · 推荐使用 Chrome 或 Edge
         </p>
+        {showDemos && <DemoGallery onClose={() => setShowDemos(false)} />}
       </div>
     </div>
   )

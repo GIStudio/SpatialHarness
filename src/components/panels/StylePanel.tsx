@@ -3,6 +3,7 @@
  * 所有修改立即通过 useProjectStore.updateLayer 写回图层 style。
  */
 import { Layers, Plus, RotateCcw, Trash2, Wand2 } from 'lucide-react'
+import { useState } from 'react'
 import {
   Button,
   ColorInput,
@@ -22,7 +23,6 @@ import { useUiStore } from '@/state/ui'
 import type { VectorGeometryType, VectorLayerModel } from '@/core/layers/model'
 import {
   DEFAULT_PALETTE,
-  equalIntervalBreaks,
   generateCategories,
   type CategorizedSymbolSpec,
   type GraduatedSymbolSpec,
@@ -31,6 +31,47 @@ import {
   type SymbolKind,
   type SymbolSpec,
 } from '@/core/style/types'
+import { autoStyleSpec, graduatedBreaks } from '@/core/style/legend'
+import { CLASSIFY_METHODS, type ClassifyMethod } from '@/core/style/classify'
+import { rampColors, rampsOfType, getRamp, type RampType } from '@/core/style/ramps'
+
+/** 色带选择器：下拉 + 颜色条预览 */
+function RampPicker({
+  type,
+  ramp,
+  invert,
+  onRamp,
+  onInvert,
+}: {
+  type: RampType
+  ramp: string
+  invert: boolean
+  onRamp: (id: string) => void
+  onInvert: (v: boolean) => void
+}) {
+  const preview = rampColors(ramp, 7, invert)
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-end gap-1.5">
+        <Field label="色带" className="flex-1">
+          <Select
+            value={ramp}
+            onChange={onRamp}
+            options={rampsOfType(type).map((r) => ({ value: r.id, label: r.name }))}
+          />
+        </Field>
+        <Button variant="outline" size="sm" title="反转色带" onClick={() => onInvert(!invert)}>
+          反转
+        </Button>
+      </div>
+      <div className="flex h-2 overflow-hidden rounded" title={getRamp(ramp).name}>
+        {preview.map((c, i) => (
+          <span key={i} className="h-full flex-1" style={{ backgroundColor: c }} />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 // ---------------- 颜色小工具 ----------------
 
@@ -219,6 +260,8 @@ function CategorizedControls({
   onChange: (patch: Partial<CategorizedSymbolSpec>) => void
 }) {
   const fieldOptions = layer.fields.map((f) => ({ value: f.name, label: f.name }))
+  const [ramp, setRamp] = useState('okabe-ito')
+  const [invert, setInvert] = useState(false)
 
   const onFieldChange = (v: string) => {
     onChange({ field: v })
@@ -233,7 +276,8 @@ function CategorizedControls({
       useUiStore.getState().flash('所选字段没有可用数据', 'warn')
       return
     }
-    onChange({ categories: generateCategories(values) })
+    const uniq = new Set(values.map((v) => String(v))).size
+    onChange({ categories: generateCategories(values, rampColors(ramp, Math.max(8, uniq), invert)) })
   }
 
   const onAddCategory = () => {
@@ -251,8 +295,9 @@ function CategorizedControls({
       <Field label="分类字段">
         <Select value={symbol.field} onChange={onFieldChange} options={fieldOptions} />
       </Field>
+      <RampPicker type="qualitative" ramp={ramp} invert={invert} onRamp={setRamp} onInvert={setInvert} />
       <Button icon={<Wand2 size={13} />} onClick={onAutoClassify} className="w-full">
-        自动分类
+        自动分类（按色带配色）
       </Button>
       {symbol.categories.length > 0 && (
         <div className="flex flex-col gap-1">
@@ -293,6 +338,9 @@ function GraduatedControls({
     .filter((f) => f.type === 'number')
     .map((f) => ({ value: f.name, label: f.name }))
   const count = symbol.breaks.length >= 3 && symbol.breaks.length <= 9 ? symbol.breaks.length : 5
+  const [method, setMethod] = useState<ClassifyMethod>('jenks')
+  const [ramp, setRamp] = useState('viridis')
+  const [invert, setInvert] = useState(false)
 
   const onFieldChange = (v: string) => {
     onChange({ field: v })
@@ -301,13 +349,13 @@ function GraduatedControls({
     }
   }
 
-  const applyBreaks = (n: number) => {
+  const applyBreaks = (n: number, m = method, r = ramp, inv = invert) => {
     const nums = numericFieldValues(layer, symbol.field)
     if (nums.length === 0) {
       useUiStore.getState().flash('所选字段没有数值数据', 'warn')
       return
     }
-    onChange({ breaks: equalIntervalBreaks(nums, n) })
+    onChange({ breaks: graduatedBreaks(nums, n, m, r, inv) })
   }
 
   return (
@@ -315,6 +363,31 @@ function GraduatedControls({
       <Field label="渐变字段">
         <Select value={symbol.field} onChange={onFieldChange} options={fieldOptions} />
       </Field>
+      <Field label="分级方法">
+        <Select
+          value={method}
+          onChange={(v) => {
+            const m = v as ClassifyMethod
+            setMethod(m)
+            applyBreaks(count, m)
+          }}
+          options={CLASSIFY_METHODS.map((m) => ({ value: m.id, label: m.name }))}
+        />
+      </Field>
+      <p className="-mt-1 text-[11px] text-text-faint">{CLASSIFY_METHODS.find((m) => m.id === method)?.hint}</p>
+      <RampPicker
+        type="sequential"
+        ramp={ramp}
+        invert={invert}
+        onRamp={(r) => {
+          setRamp(r)
+          applyBreaks(count, method, r)
+        }}
+        onInvert={(v) => {
+          setInvert(v)
+          applyBreaks(count, method, ramp, v)
+        }}
+      />
       <div className="flex items-end gap-1.5">
         <Field label="分级数" className="flex-1">
           <Select
@@ -500,7 +573,20 @@ export default function StylePanel() {
         </div>
       </CollapseSection>
 
-      <div className="mt-1 border-t border-border/60 pt-2">
+      <div className="mt-1 flex flex-col gap-1.5 border-t border-border/60 pt-2">
+        <Button
+          variant="outline"
+          icon={<Wand2 size={13} />}
+          onClick={() => {
+            const next = autoStyleSpec(vectorLayer.features, vectorLayer.fields, { geometryType: vectorLayer.geometryType })
+            commit(next)
+            const f = next.symbol.kind === 'simple' ? '' : `（字段：${next.symbol.field}）`
+            useUiStore.getState().flash(`已自动符号化${f}`, 'ok')
+          }}
+          className="w-full"
+        >
+          自动符号化（推荐字段 + 色带）
+        </Button>
         <Button variant="outline" icon={<RotateCcw size={13} />} onClick={reset} className="w-full">
           重置样式
         </Button>

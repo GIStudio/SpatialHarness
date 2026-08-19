@@ -4,8 +4,17 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+// GitHub Pages 部署在 <owner>.github.io/<repo>/ 子路径下；
+// BASE_PATH 显式指定时优先（本地验证子路径构建用），
+// CI（GitHub Actions）自动用仓库名子路径，本地 dev/build 保持根路径。
+const base = process.env.BASE_PATH ?? (process.env.GITHUB_ACTIONS === 'true' ? '/SpatialHarness/' : '/')
+
 export default defineConfig({
+  base,
   plugins: [react(), tailwindcss()],
+  // demo/ 目录作为静态资源根：data/（示例数据）等在 dev 下直接可访问、
+  // build 时整体拷贝进 dist（含 favicon.svg）
+  publicDir: 'demo',
   resolve: {
     alias: [
       { find: '@', replacement: path.resolve(__dirname, 'src') },

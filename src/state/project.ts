@@ -6,7 +6,7 @@
 import { create } from 'zustand'
 import type { Feature } from 'geojson'
 import type { LayerModel, VectorLayerModel } from '@/core/layers/model'
-import type { ViewState } from '@/core/engine/types'
+import type { BasemapId, ViewState } from '@/core/engine/types'
 import { uid } from '@/core/layers/model'
 
 export type SaveStatus = 'idle' | 'saving' | 'saved' | 'disk' | 'idb-only' | 'error'
@@ -18,6 +18,8 @@ export interface ProjectState {
   updatedAt: number
   dirty: boolean
   view: ViewState | null
+  /** 在线底图（'none' 关闭，本地优先默认） */
+  basemap: BasemapId
   layers: LayerModel[]
   /** 每个图层的修改版本号（引擎增量同步用） */
   layerRev: Record<string, number>
@@ -36,6 +38,7 @@ export interface ProjectState {
     createdAt: number
     updatedAt: number
     view: ViewState | null
+    basemap?: BasemapId
     layers: LayerModel[]
   }): void
   addLayer(layer: LayerModel): void
@@ -48,6 +51,7 @@ export interface ProjectState {
   removeFeatures(id: string, featureIds: string[]): void
   moveLayer(id: string, targetIndex: number): void
   setView(view: ViewState): void
+  setBasemap(basemap: BasemapId): void
   setSaveStatus(status: SaveStatus): void
   setLastSavedAt(t: number | null): void
   setDirty(dirty: boolean): void
@@ -73,6 +77,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
   updatedAt: 0,
   dirty: false,
   view: null,
+  basemap: 'none',
   layers: [],
   layerRev: {},
   saveStatus: 'idle',
@@ -90,6 +95,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       updatedAt: now,
       dirty: true,
       view: null,
+      basemap: 'none',
       layers: [],
       layerRev: {},
       saveStatus: 'idle',
@@ -107,6 +113,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       updatedAt: snap.updatedAt,
       dirty: false,
       view: snap.view,
+      basemap: snap.basemap ?? 'none',
       layers: snap.layers,
       layerRev,
       saveStatus: 'saved',
@@ -217,6 +224,11 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       return
     }
     set({ view, dirty: true })
+  },
+
+  setBasemap(basemap) {
+    if (get().basemap === basemap) return
+    set({ basemap, dirty: true, updatedAt: Date.now() })
   },
 
   setSaveStatus(status) {

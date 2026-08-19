@@ -10,3 +10,4 @@ coverage
 .pnpm-store
 .npm-cache
 .tmp-modlens
+demo/data/.cache/

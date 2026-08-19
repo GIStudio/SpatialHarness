@@ -26,6 +26,8 @@ export interface UiState {
   rightOpen: boolean
   leftOpen: boolean
   booted: boolean
+  /** 地图图例浮层开关 */
+  legendVisible: boolean
   /** 磁盘上存在可打开的工程文件 */
   diskProjectAvailable: boolean
   /** 忙碌任务（导入/分析） */
@@ -38,6 +40,7 @@ export interface UiState {
   toggleRight(): void
   toggleLeft(): void
   setBooted(b: boolean): void
+  toggleLegend(): void
   setDiskProjectAvailable(b: boolean): void
   setBusy(busy: { id: string; label: string } | null): void
   flash(text: string, kind?: 'info' | 'ok' | 'warn' | 'error'): void
@@ -49,6 +52,7 @@ export const useUiStore = create<UiState>()((set) => ({
   rightOpen: true,
   leftOpen: true,
   booted: false,
+  legendVisible: true,
   diskProjectAvailable: false,
   busy: null,
   statusMessage: null,
@@ -67,6 +71,9 @@ export const useUiStore = create<UiState>()((set) => ({
   },
   setBooted(b) {
     set({ booted: b })
+  },
+  toggleLegend() {
+    set((s) => ({ legendVisible: !s.legendVisible }))
   },
   setDiskProjectAvailable(b) {
     set({ diskProjectAvailable: b })

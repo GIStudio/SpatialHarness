@@ -24,6 +24,7 @@ export function buildSnapshot(): ProjectFile {
     createdAt: s.createdAt,
     updatedAt: Date.now(),
     view: s.view,
+    basemap: s.basemap,
     crs: 'EPSG:3857',
     layerOrder: s.layers.map((l) => l.id),
     layers: s.layers,

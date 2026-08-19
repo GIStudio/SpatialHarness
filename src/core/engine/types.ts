@@ -12,6 +12,24 @@
  */
 import type { Feature, Geometry } from 'geojson'
 import type { LayerStyle } from '@/core/style/types'
+import type { LegendGroup } from '@/core/style/legend'
+
+/** 在线底图（瓦片服务）标识；'none' 表示无底图（本地优先默认） */
+export type BasemapId = 'none' | 'osm' | 'carto-light' | 'carto-dark'
+
+/** PNG 导出：图例分块（按图层分组） */
+export type ExportLegendGroup = LegendGroup
+
+export interface ExportPngOptions {
+  /** 图题（绘制在图像顶部） */
+  title?: string
+  /** 图例（绘制在图像右下角），空数组或不传则不绘制 */
+  legends?: ExportLegendGroup[]
+  /** 版权/来源说明（绘制在图像左下角） */
+  attribution?: string
+  /** 分辨率倍数（1 或 2，默认 1） */
+  scale?: number
+}
 
 /** 引擎无关的要素视图（用于拾取/选中回调） */
 export interface EngineFeature {
@@ -112,6 +130,13 @@ export interface MapEngine {
   setLayerZIndex(id: string, zIndex: number): void
   getLayerIds(): string[]
   layerCount(): number
+
+  // ---- 底图与导出 ----
+  /** 切换在线底图（'none' 关闭） */
+  setBasemap(id: BasemapId): void
+  getBasemap(): BasemapId
+  /** 导出当前视图为 PNG（合成画布 + 可选图题/图例/版权） */
+  exportPng(options?: ExportPngOptions): Promise<Blob>
 
   // ---- 视图 ----
   getView(): ViewState

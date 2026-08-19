@@ -4,6 +4,7 @@
 > 模仿 QGIS 交互范式、采用通用 GIS 数据格式、现代化组件化架构。
 
 [![CI](https://github.com/GIStudio/SpatialHarness/actions/workflows/ci.yml/badge.svg)](https://github.com/GIStudio/SpatialHarness/actions/workflows/ci.yml)
+[![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-online-2ea44f)](https://gistudio.github.io/SpatialHarness/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178c6)](https://www.typescriptlang.org/)
 
@@ -20,10 +21,20 @@
 | 💾 **自动保存** | 任意变更 1.2s 防抖自动保存（双轨：IndexedDB 必写 + 磁盘尽力写），重启浏览器自动恢复 |
 | 🧩 **引擎可插拔** | 引擎抽象层为核心（`MapEngine` 接口 + 注册表），OpenLayers 为 v1 实现；未来可注册 MapLibre GL 等新引擎，UI 零改动 |
 | 🎨 **QGIS 风格符号化** | 单一符号 / 分类符号 / 渐变符号 + 标注，实时预览 |
+| 🧭 **自动制图** | 分级方法（等距/分位数/Jenks 自然间断点）+ 制图色带库（顺序/发散/定性，插值与反转）+ 一键自动符号化；图例自动生成，地图浮层与导出图一致 |
+| 🌐 **在线底图** | OpenStreetMap / Carto 浅色 / Carto 深色（CORS 友好），无底图纯本地模式为默认 |
+| 🖼️ **PNG 导出** | 当前视图一键导出 PNG：图题 + 自动图例 + 底图版权合成，支持 2x 高清 |
+| ✨ **标准示例库** | 内置 7 个 demo 场景（开源数据 + 自动符号化 + 底图 + 视图）一键载入，见 [demo/README.md](demo/README.md) |
 | 📊 **属性表** | 虚拟滚动大表、排序、筛选、单元格直接编辑、与地图选择联动 |
 | 🔬 **空间分析工具箱** | 缓冲区 / 相交 / 联合 / 差集 / 裁剪 / 融合 / 质心 / 字段统计 / 图层统计 / 外包矩形 |
-| 🗺️ **栅格处理（GDAL WASM）** | 栅格信息 / 格式转换（gdal_translate）/ 重投影（gdalwarp）；GeoPackage 瓦片表导入组图显示、导出（EPSG:3857 XYZ） |
 | ✏️ **编辑与绘制** | 绘制点线面、顶点编辑、属性编辑，支持撤销/重做（命令模式） |
+
+## 🌐 在线演示
+
+无需安装，直接打开 **<https://gistudio.github.io/SpatialHarness/>**（GitHub Pages 部署，`main` 分支推送自动更新）。
+纯前端静态托管：示例数据与 WASM 运行时均从 Pages 加载，数据操作仍全部留在本地浏览器。
+
+> 提示：File System Access API 在部分浏览器/隐私模式下不可用，此时 IndexedDB 工作区仍可完整使用。
 
 ## 🚀 快速开始
 
@@ -37,7 +48,13 @@ pnpm test         # 单元测试（vitest）
 pnpm build        # 类型检查 + 生产构建
 ```
 
-首次使用：点击「新建工程」→ 可选「选择文件夹」作为磁盘保存位置 → 用「导入文件」或「打开数据文件夹」加载你的 GIS 数据。
+首次使用：点击「新建工程」→ 可选「选择文件夹」作为磁盘保存位置 → 用「导入文件」或「打开数据文件夹」加载你的 GIS 数据；或直接打开「示例库」体验 7 个标准 demo 场景（也可访问 `http://localhost:5173/?demo=world-population` 直达）。
+
+## ✨ 标准 demo
+
+`demo/` 内置轻量开源数据（Natural Earth / USGS / 天地图中国标准地图数据，单文件 < 2 MB）与场景注册表：
+世界人口分级设色、**按中国标准地图绘制的中国省级行政区（藏南在中国内、含台湾/港澳/南海诸岛/九段线）**、世界城市、全球地震 CSV 监测、OSM 在线底图叠加、土地利用样例、一键自动制图。
+场景目录、效果图与数据许可见 [demo/README.md](demo/README.md)；效果图可用 `scripts/capture_demos.py` 自动复现。
 
 ## 📦 支持的格式
 
@@ -45,7 +62,7 @@ pnpm build        # 类型检查 + 生产构建
 |---|---|---|---|
 | GeoJSON | ✅ | ✅ | 原生格式，编辑后可直接写回 |
 | Shapefile | ✅ | ✅ | 导入 `.shp + .dbf + .prj`（支持 `.zip` 包），自动坐标系归一化；导出为 `.zip`（shp/shx/dbf/prj/cpg 五件套，UTF-8 属性编码） |
-| GeoPackage | ✅ | ✅ | 纯 WASM（sql.js）读写，无原生依赖；多要素表导入为多图层，导出 EPSG:4326 单表 `.gpkg`；瓦片表导入组图显示、导出 3857 XYZ 瓦片 |
+| GeoPackage | ✅ | ✅ | 纯 WASM（sql.js）读写，无原生依赖；多要素表导入为多图层，导出 EPSG:4326 单表 `.gpkg` |
 | KML | ✅ | ✅ | |
 | GPX | ✅ | ✅ | 导入 wpt/trk/rte；导出点 → wpt、线 → trk（面按外环转 trk 并告警） |
 | GeoTIFF | ✅ | ❌ | 栅格渲染（懒加载分块） |
@@ -67,8 +84,8 @@ UI 层（React 组件）            → Toolbar / LayerPanel / AttributeTable / 
 
 ## 🧪 验证
 
-- **单元测试**：Web 端 79 例（存储双轨往返、手写二进制 Shapefile / GeoTIFF fixture、Shapefile / GeoPackage 导出→导入往返（含中文属性/面孔体/混合几何）、GeoPackage 瓦片表往返、GPX 导出结构、GDAL 栅格处理、turf 空间分析含多要素叠加语义、WKT 解析）+ MCP 端 31 例
-- **冒烟测试**：`scripts/smoke_test.py`（Playwright）覆盖完整用户旅程：新建工程 → 导入 → 自动保存 → 识别 → 样式 → Shapefile/GPX/GeoPackage 导出下载 → 分析 → 绘制 → 撤销/重做 → 刷新恢复 → GeoPackage 导入回环 → GeoTIFF 导入 + GDAL 转换/瓦片导出（24 项）
+- **单元测试**：Web 端 73 例（存储双轨往返、手写二进制 Shapefile fixture、Shapefile / GeoPackage 导出→导入往返（含中文属性/面孔体/混合几何）、GPX 导出结构、turf 空间分析含多要素叠加语义、WKT 解析、分级/色带/图例自动化）+ MCP 端 27 例
+- **冒烟测试**：`scripts/smoke_test.py`（Playwright）覆盖完整用户旅程：新建工程 → 导入 → 自动保存 → 识别 → 样式 → Shapefile/GPX/GeoPackage 导出下载 → 分析 → 绘制 → 撤销/重做 → 刷新恢复 → GeoPackage 导入回环
 
 ## 🤖 AI 可操作性（MCP）
 
@@ -93,9 +110,9 @@ pnpm --filter @spatial-harness/mcp-server build   # 生成 mcp/dist/server.cjs
 ## 🗺️ 路线图
 
 - 引擎：MapLibre GL 适配器、Cesium 3D
-- 格式：GeoPackage 瓦片金字塔多层级、gdal3.js 更多栅格算子
+- 格式：GeoPackage 瓦片表、gdal3.js WASM 栅格处理
 - 分析：网络分析、栅格计算器、热力图
-- 制图：打印布局
+- 制图：打印布局（PNG 导出已实现：图题/图例/版权合成，1x/2x）
 
 ## 📄 License
 

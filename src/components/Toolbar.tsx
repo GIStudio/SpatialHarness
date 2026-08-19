@@ -1,7 +1,7 @@
 /**
  * 顶部工具栏：工程操作、撤销重做、工具组、视图操作。
  */
-import { useRef, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import {
   FilePlus2,
   FolderOpen,
@@ -21,14 +21,20 @@ import {
   Scan,
   Layers,
   PanelRight,
+  Sparkles,
+  ImageDown,
+  ListOrdered,
 } from 'lucide-react'
-import { Button, IconButton } from './ui/primitives'
+import { Button, IconButton, Select } from './ui/primitives'
+import { DemoGallery } from './DemoGallery'
+import { ExportPngDialog } from './ExportPngDialog'
 import { useUiStore, type Tool } from '@/state/ui'
 import { useHistoryStore } from '@/state/history'
 import { useProjectStore } from '@/state/project'
 import { useSelectionStore } from '@/state/selection'
 import { engineFitToLayer } from '@/state/engineBridge'
 import { runSave, importFromFilePicker, importFromDirectory, connectProjectFolder } from '@/state/persistence'
+import type { BasemapId } from '@/core/engine/types'
 
 const TOOL_ITEMS: { tool: Tool; label: string; icon: ReactNode }[] = [
   { tool: 'pan', label: '浏览', icon: <MousePointer2 size={15} /> },
@@ -50,6 +56,12 @@ export function Toolbar({ onNewProject, onOpenProject }: { onNewProject: () => v
   const toggleRight = useUiStore((s) => s.toggleRight)
   const diskConnected = useProjectStore((s) => s.diskConnected)
   const diskWritable = useProjectStore((s) => s.diskWritable)
+  const basemap = useProjectStore((s) => s.basemap)
+  const projectId = useProjectStore((s) => s.projectId)
+  const legendVisible = useUiStore((s) => s.legendVisible)
+  const toggleLegend = useUiStore((s) => s.toggleLegend)
+  const [showDemos, setShowDemos] = useState(false)
+  const [showExport, setShowExport] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const ensureProject = () => {
@@ -116,6 +128,9 @@ export function Toolbar({ onNewProject, onOpenProject }: { onNewProject: () => v
       <Button size="sm" icon={<FolderInput size={14} />} title="打开本地数据文件夹（File System Access API，直接读写磁盘）" onClick={() => void onImportFolder()}>
         打开数据文件夹
       </Button>
+      <Button size="sm" icon={<Sparkles size={14} />} title="载入标准 demo 场景（开源数据 + 自动符号化 + 底图）" onClick={() => setShowDemos(true)}>
+        示例
+      </Button>
 
       <div className="mx-1 h-5 w-px bg-border" />
 
@@ -162,11 +177,38 @@ export function Toolbar({ onNewProject, onOpenProject }: { onNewProject: () => v
       <IconButton title="缩放至选中图层" icon={<Maximize2 size={15} />} onClick={() => engineFitToLayer(useSelectionStore.getState().activeLayerId ?? undefined)} />
       <IconButton title="缩放至全部图层" icon={<Scan size={15} />} onClick={() => engineFitToLayer()} />
 
+      <div className="mx-1 h-5 w-px bg-border" />
+
+      {/* 底图与制图 */}
+      <Select
+        value={basemap}
+        onChange={(v) => useProjectStore.getState().setBasemap(v as BasemapId)}
+        options={[
+          { value: 'none', label: '无底图' },
+          { value: 'osm', label: '底图：OpenStreetMap' },
+          { value: 'carto-light', label: '底图：Carto 浅色' },
+          { value: 'carto-dark', label: '底图：Carto 深色' },
+        ]}
+      />
+      <IconButton title="图例浮层" icon={<ListOrdered size={15} />} active={legendVisible} onClick={toggleLegend} />
+      <Button
+        size="sm"
+        icon={<ImageDown size={14} />}
+        title="导出当前视图为 PNG（含图题/图例/版权）"
+        disabled={!projectId}
+        onClick={() => setShowExport(true)}
+      >
+        导出 PNG
+      </Button>
+
       <div className="flex-1" />
 
       {/* 面板开关 */}
       <IconButton title="图层面板" icon={<Layers size={15} />} active={leftOpen} onClick={toggleLeft} />
       <IconButton title="属性/样式/分析面板" icon={<PanelRight size={15} />} active={rightOpen} onClick={toggleRight} />
+
+      {showDemos && <DemoGallery onClose={() => setShowDemos(false)} />}
+      {showExport && <ExportPngDialog onClose={() => setShowExport(false)} />}
     </div>
   )
 }
