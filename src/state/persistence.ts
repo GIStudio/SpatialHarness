@@ -81,7 +81,7 @@ function defaultStyle(geometryType: VectorLayerModel['geometryType']): VectorLay
       return { symbol: { kind: 'simple', strokeColor: color, strokeWidth: 2 }, label: null }
     case 'Polygon':
       return {
-        symbol: { kind: 'simple', fillColor: 'rgba(230,25,75,0.3)', strokeColor: color, strokeWidth: 1.5 },
+        symbol: { kind: 'simple', fillColor: 'rgba(158,29,28,0.3)', strokeColor: color, strokeWidth: 1.5 },
         label: null,
       }
     default:

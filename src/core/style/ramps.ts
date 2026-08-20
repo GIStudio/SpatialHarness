@@ -93,6 +93,13 @@ export const COLOR_RAMPS: ColorRamp[] = [
     colors: ['#e69f00', '#56b4e9', '#009e73', '#f0e442', '#0072b2', '#d55e00', '#cc79a7', '#999999'],
   },
   {
+    // Mappedinfo Palette Lab 8 组强调色（https://mappedinfo.github.io/palette-lab/）
+    id: 'mappedinfo',
+    name: '学术（Mappedinfo）',
+    type: 'qualitative',
+    colors: ['#64bbcf', '#ffd15d', '#9e1d1c', '#ee1969', '#e97a46', '#61ac4c', '#6583e0', '#008e6b'],
+  },
+  {
     id: 'pastel',
     name: '柔和（定性）',
     type: 'qualitative',

@@ -80,7 +80,7 @@ function normalizeHex(color: string): string {
   if (/^#[0-9a-fA-F]{3}$/.test(color)) {
     return `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`
   }
-  return '#e6194b'
+  return '#9e1d1c'
 }
 
 /** 从任意颜色字符串解析出规范化 hex（支持 #rgb/#rrggbb/rgb()/rgba()） */
@@ -114,16 +114,16 @@ function hexToRgba(hex: string, alphaPercent: number): string {
 function defaultSimpleStyle(geometryType: VectorGeometryType): LayerStyle {
   switch (geometryType) {
     case 'Point':
-      return { symbol: { kind: 'simple', pointRadius: 6, pointColor: '#e6194b' }, label: null }
+      return { symbol: { kind: 'simple', pointRadius: 6, pointColor: '#9e1d1c' }, label: null }
     case 'LineString':
-      return { symbol: { kind: 'simple', strokeColor: '#e6194b', strokeWidth: 2 }, label: null }
+      return { symbol: { kind: 'simple', strokeColor: '#9e1d1c', strokeWidth: 2 }, label: null }
     case 'Polygon':
       return {
-        symbol: { kind: 'simple', fillColor: 'rgba(230,25,75,0.3)', strokeColor: '#e6194b', strokeWidth: 1.5 },
+        symbol: { kind: 'simple', fillColor: 'rgba(158,29,28,0.3)', strokeColor: '#9e1d1c', strokeWidth: 1.5 },
         label: null,
       }
     default:
-      return { symbol: { kind: 'simple', pointRadius: 6, pointColor: '#e6194b' }, label: null }
+      return { symbol: { kind: 'simple', pointRadius: 6, pointColor: '#9e1d1c' }, label: null }
   }
 }
 
@@ -183,7 +183,7 @@ function PointControls({
         />
       </Field>
       <Field label="颜色">
-        <ColorInput value={symbol.pointColor ?? '#e6194b'} onChange={(v) => onChange({ pointColor: v })} />
+        <ColorInput value={symbol.pointColor ?? '#9e1d1c'} onChange={(v) => onChange({ pointColor: v })} />
       </Field>
       <Field label="半径">
         <Slider value={symbol.pointRadius ?? 6} min={2} max={16} onChange={(v) => onChange({ pointRadius: v })} />
@@ -202,7 +202,7 @@ function LineControls({
   return (
     <>
       <Field label="颜色">
-        <ColorInput value={symbol.strokeColor ?? '#e6194b'} onChange={(v) => onChange({ strokeColor: v })} />
+        <ColorInput value={symbol.strokeColor ?? '#9e1d1c'} onChange={(v) => onChange({ strokeColor: v })} />
       </Field>
       <Field label="宽度">
         <Slider value={symbol.strokeWidth ?? 2} min={0.5} max={10} step={0.5} onChange={(v) => onChange({ strokeWidth: v })} />
@@ -227,7 +227,7 @@ function PolygonControls({
   symbol: SimpleSymbolSpec
   onChange: (patch: Partial<SimpleSymbolSpec>) => void
 }) {
-  const fill = symbol.fillColor ?? '#e6194b'
+  const fill = symbol.fillColor ?? '#9e1d1c'
   const hex = hexFromColor(fill)
   const alpha = alphaOf(fill)
   return (
@@ -239,7 +239,7 @@ function PolygonControls({
         <Slider value={alpha} min={0} max={100} onChange={(a) => onChange({ fillColor: hexToRgba(hex, a) })} />
       </Field>
       <Field label="描边颜色">
-        <ColorInput value={symbol.strokeColor ?? '#e6194b'} onChange={(v) => onChange({ strokeColor: v })} />
+        <ColorInput value={symbol.strokeColor ?? '#9e1d1c'} onChange={(v) => onChange({ strokeColor: v })} />
       </Field>
       <Field label="描边宽度">
         <Slider value={symbol.strokeWidth ?? 1.5} min={0.5} max={10} step={0.5} onChange={(v) => onChange({ strokeWidth: v })} />

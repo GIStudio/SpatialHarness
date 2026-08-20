@@ -42,7 +42,7 @@ function makeVectorLayer(now: number): VectorLayerModel {
       { name: 'name', type: 'string', sampleCount: 1 },
       { name: 'value', type: 'number', sampleCount: 1 },
     ],
-    style: { symbol: { kind: 'simple', pointRadius: 4, pointColor: '#e6194b' }, label: null },
+    style: { symbol: { kind: 'simple', pointRadius: 4, pointColor: '#9e1d1c' }, label: null },
     editable: true,
     format: 'geojson',
   }

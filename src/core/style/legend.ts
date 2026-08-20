@@ -69,7 +69,7 @@ export function buildLegendItems(symbol: SymbolSpec, geometryType: VectorGeometr
   const kind = itemKind(geometryType)
   if (symbol.kind === 'simple') {
     const color =
-      symbol.fillColor ?? symbol.pointColor ?? symbol.strokeColor ?? '#e6194b'
+      symbol.fillColor ?? symbol.pointColor ?? symbol.strokeColor ?? '#9e1d1c'
     return [{ label: '', color, kind }]
   }
   if (symbol.kind === 'categorized') {

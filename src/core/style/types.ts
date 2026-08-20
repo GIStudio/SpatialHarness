@@ -55,12 +55,15 @@ export interface LayerStyle {
   label: LabelSpec | null
 }
 
-/** 用于分类/渐变配色的色板（QGIS 风格） */
+/**
+ * 用于分类/渐变配色的色板（QGIS 风格）。
+ * 取 Mappedinfo Palette Lab（https://mappedinfo.github.io/palette-lab/）推荐的
+ * 图表序列色（朱砂→靛蓝→翡翠→琥珀→品红→天蓝→珊瑚→青草），
+ * 前 8 色即档案「区分 8 组数据」建议序列；首色为新建图层默认色。
+ */
 export const DEFAULT_PALETTE = [
-  '#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231',
-  '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe',
-  '#008080', '#e6beff', '#9a6324', '#fffac8', '#800000',
-  '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080',
+  '#9e1d1c', '#6583e0', '#008e6b', '#ffd15d', '#ee1969', '#64bbcf', '#e97a46', '#61ac4c',
+  '#90e0d6', '#cca4e3', '#f5e6d0', '#ffe59d', '#808080',
 ]
 
 /** 从值列表生成分类配色 */

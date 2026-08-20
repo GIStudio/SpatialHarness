@@ -161,7 +161,7 @@ export function Toolbar({ onNewProject, onOpenProject }: { onNewProject: () => v
             className={
               'flex h-7 items-center gap-1 rounded px-2 text-xs transition-colors ' +
               (tool === item.tool
-                ? 'bg-accent text-white'
+                ? 'bg-accent text-bg'
                 : 'text-text-dim hover:bg-panel-3 hover:text-text')
             }
           >

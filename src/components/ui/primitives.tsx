@@ -17,7 +17,7 @@ type ButtonSize = 'xs' | 'sm' | 'md'
 
 const btnVariants: Record<ButtonVariant, string> = {
   default: 'bg-panel-2 border border-border hover:bg-panel-3 text-text',
-  primary: 'bg-accent text-white hover:bg-blue-600 border border-transparent',
+  primary: 'bg-accent text-bg hover:bg-accent/90 border border-transparent',
   ghost: 'bg-transparent border border-transparent hover:bg-panel-2 text-text-dim hover:text-text',
   outline: 'bg-transparent border border-border-strong hover:border-accent text-text',
   danger: 'bg-transparent border border-transparent text-danger hover:bg-danger/10',
@@ -312,7 +312,7 @@ function normalizeHex(color: string): string {
   if (/^#[0-9a-fA-F]{3}$/.test(color)) {
     return `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`
   }
-  return '#e6194b'
+  return '#9e1d1c'
 }
 
 export function Slider({

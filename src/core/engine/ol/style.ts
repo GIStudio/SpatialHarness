@@ -14,15 +14,15 @@ export function hexToRgba(hex: string, alpha: number): string {
   if (h.startsWith('#')) h = h.slice(1)
   if (h.length === 3) h = h.split('').map((c) => c + c).join('')
   const num = parseInt(h, 16)
-  if (Number.isNaN(num)) return `rgba(230,25,75,${alpha})`
+  if (Number.isNaN(num)) return `rgba(158,29,28,${alpha})`
   const r = (num >> 16) & 0xff
   const g = (num >> 8) & 0xff
   const b = num & 0xff
   return `rgba(${r},${g},${b},${alpha})`
 }
 
-const SELECT_STROKE = '#3b82f6'
-const SELECT_FILL = 'rgba(59,130,246,0.18)'
+const SELECT_STROKE = '#64bbcf'
+const SELECT_FILL = 'rgba(100,187,207,0.18)'
 
 interface ResolvedColor {
   fill?: string
@@ -77,7 +77,7 @@ function baseStyles(color: ResolvedColor, spec: SymbolSpec, geomType: string): S
   if (geomType === 'Point') {
     const s = spec.kind === 'simple' ? (spec as SimpleSymbolSpec) : null
     const radius = s?.pointRadius ?? 6
-    const fill = new Fill({ color: color.fill ?? '#e6194b' })
+    const fill = new Fill({ color: color.fill ?? '#9e1d1c' })
     let image: CircleStyle | RegularShape
     if (s?.pointSymbol && s.pointSymbol !== 'circle') {
       const rotation = s.pointSymbol === 'triangle' ? Math.PI / 6 : 0
@@ -87,14 +87,14 @@ function baseStyles(color: ResolvedColor, spec: SymbolSpec, geomType: string): S
         radius2: s.pointSymbol === 'star' ? radius * 0.45 : undefined,
         angle: rotation,
         fill,
-        stroke: new Stroke({ color: color.stroke ?? '#e6194b', width: 1.2 }),
+        stroke: new Stroke({ color: color.stroke ?? '#9e1d1c', width: 1.2 }),
       })
     } else {
-      image = new CircleStyle({ radius, fill, stroke: new Stroke({ color: color.stroke ?? '#e6194b', width: 1.2 }) })
+      image = new CircleStyle({ radius, fill, stroke: new Stroke({ color: color.stroke ?? '#9e1d1c', width: 1.2 }) })
     }
     return [new Style({ image })]
   }
-  const stroke = new Stroke({ color: color.stroke ?? '#e6194b', width: spec.kind === 'simple' ? (spec as SimpleSymbolSpec).strokeWidth ?? 2 : 2 })
+  const stroke = new Stroke({ color: color.stroke ?? '#9e1d1c', width: spec.kind === 'simple' ? (spec as SimpleSymbolSpec).strokeWidth ?? 2 : 2 })
   if (spec.kind === 'simple' && (spec as SimpleSymbolSpec).strokeDash) {
     stroke.setLineDash((spec as SimpleSymbolSpec).strokeDash!)
   }
@@ -104,7 +104,7 @@ function baseStyles(color: ResolvedColor, spec: SymbolSpec, geomType: string): S
   // Polygon / 其他
   return [
     new Style({
-      fill: new Fill({ color: color.fill ? hexToRgba(color.fill, 0.35) : 'rgba(230,25,75,0.35)' }),
+      fill: new Fill({ color: color.fill ? hexToRgba(color.fill, 0.35) : 'rgba(158,29,28,0.35)' }),
       stroke,
     }),
   ]
@@ -150,16 +150,16 @@ export const DRAW_STYLES: Record<'Point' | 'LineString' | 'Polygon', StyleFuncti
     new Style({
       image: new CircleStyle({
         radius: 5,
-        fill: new Fill({ color: '#3b82f6' }),
+        fill: new Fill({ color: '#64bbcf' }),
         stroke: new Stroke({ color: '#ffffff', width: 1.5 }),
       }),
     }),
   ],
-  LineString: () => [new Style({ stroke: new Stroke({ color: '#3b82f6', width: 2 }) })],
+  LineString: () => [new Style({ stroke: new Stroke({ color: '#64bbcf', width: 2 }) })],
   Polygon: () => [
     new Style({
-      fill: new Fill({ color: 'rgba(59,130,246,0.2)' }),
-      stroke: new Stroke({ color: '#3b82f6', width: 2 }),
+      fill: new Fill({ color: 'rgba(100,187,207,0.2)' }),
+      stroke: new Stroke({ color: '#64bbcf', width: 2 }),
     }),
   ],
 }

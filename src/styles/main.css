@@ -1,20 +1,30 @@
 @import 'tailwindcss';
 
+/*
+ * 主题色板：Mappedinfo Palette Lab（开源学术配色档案）
+ * https://mappedinfo.github.io/palette-lab/（llms-full.txt 完整档案）
+ * 深色主题按档案「深浅主题适配」建议：#101114 深底 + 中高亮主系列
+ * （天蓝/薄荷/琥珀/珊瑚），避免深色 #008E6B、#9E1D1C 直接作数据点。
+ */
 @theme {
-  --color-bg: #0d1117;
-  --color-panel: #141a22;
-  --color-panel-2: #1b2330;
-  --color-panel-3: #232d3d;
-  --color-border: #2a3442;
-  --color-border-strong: #3b4656;
+  --color-bg: #101114;
+  --color-panel: #16181e;
+  --color-panel-2: #1d2028;
+  --color-panel-3: #262b34;
+  --color-border: #2c313b;
+  --color-border-strong: #3e4550;
   --color-text: #dbe3ee;
   --color-text-dim: #8fa0b5;
   --color-text-faint: #5d6b7f;
-  --color-accent: #3b82f6;
-  --color-accent-soft: rgba(59, 130, 246, 0.16);
-  --color-ok: #22c55e;
-  --color-warn: #f59e0b;
-  --color-danger: #ef4444;
+  /* 天蓝 Sky #64BBCF（黑底对比 9.55:1，中性数据色）——主交互色 */
+  --color-accent: #64bbcf;
+  --color-accent-soft: rgba(100, 187, 207, 0.16);
+  /* 薄荷 Mint #90E0D6（黑底 13.82:1）——成功/正向 */
+  --color-ok: #90e0d6;
+  /* 琥珀 Amber #FFD15D（黑底 14.53:1）——警告/强调 */
+  --color-warn: #ffd15d;
+  /* 珊瑚 Coral #E97A46（黑底 7.34:1）——危险/负向 */
+  --color-danger: #e97a46;
   --font-sans: 'Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
 }
@@ -96,7 +106,7 @@ body {
   background: var(--color-panel-3);
 }
 .ol-attribution {
-  background: rgba(13, 17, 23, 0.7) !important;
+  background: rgba(16, 17, 20, 0.7) !important;
   color: var(--color-text-dim) !important;
   font-size: 10px !important;
   border-radius: 4px 0 0 0;
