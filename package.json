@@ -1,9 +1,40 @@
 {
   "name": "spatial-harness",
-  "private": true,
   "version": "0.1.0",
   "type": "module",
   "description": "SpatialHarness —— 纯本地 WebGIS 工作台：引擎抽象层 + OpenLayers v1，File System Access API 直读本地磁盘，QGIS 风格现代化组件化 UI",
+  "keywords": [
+    "webgis",
+    "gis",
+    "openlayers",
+    "qgis",
+    "geojson",
+    "shapefile",
+    "geopackage",
+    "mapping",
+    "spatial-analysis",
+    "gistudio"
+  ],
+  "homepage": "https://gistudio.github.io/SpatialHarness/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GIStudio/SpatialHarness.git"
+  },
+  "bugs": {
+    "url": "https://github.com/GIStudio/SpatialHarness/issues"
+  },
+  "author": "GIStudio",
+  "license": "MIT",
+  "files": [
+    "src",
+    "demo",
+    "docs",
+    "scripts",
+    "index.html"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -62,10 +93,5 @@
     "typescript": "~5.8.3",
     "vite": "^7.0.0",
     "vitest": "^3.2.4"
-  },
-  "license": "MIT",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/GIStudio/SpatialHarness.git"
   }
 }
