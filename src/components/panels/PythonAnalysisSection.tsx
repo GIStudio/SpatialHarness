@@ -25,6 +25,7 @@ import {
   runPythonPlugin,
   type PythonPluginInfo,
 } from '@/core/bridge/pythonBridge'
+import { useAiEditStore } from '@/state/aiEdit'
 import { useProjectStore } from '@/state/project'
 import { useSelectionStore } from '@/state/selection'
 import { useUiStore } from '@/state/ui'
@@ -61,6 +62,7 @@ export default function PythonAnalysisSection() {
   const [running, setRunning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [tableResult, setTableResult] = useState<{ columns: string[]; rows: (string | number | null)[][] } | null>(null)
+  const aiEdit = useAiEditStore()
 
   const probe = async () => {
     setOnline(null)
@@ -260,6 +262,28 @@ export default function PythonAnalysisSection() {
               {error}
             </div>
           )}
+
+          <div className="rounded-md border border-border bg-panel-2 px-2 py-1.5">
+            <Checkbox
+              checked={aiEdit.enabled}
+              onChange={(v) => aiEdit.setEnabled(v)}
+              label={`AI 编辑（${aiEdit.enabled ? (aiEdit.connected ? '已连接' : '连接中…') : '未启用'}）`}
+            />
+            <p className="mt-1 text-[10px] leading-relaxed text-text-faint">
+              开启后，AI（spatialharness mcp 的 map_* 工具）可编辑当前工程；每次编辑可 Ctrl+Z 撤销。
+              {aiEdit.appliedCount > 0 && ` 已应用 ${aiEdit.appliedCount} 次。`}
+            </p>
+            {aiEdit.lastSummary && (
+              <p className="mt-0.5 truncate text-[10px] text-text-dim" title={aiEdit.lastSummary}>
+                最近: {aiEdit.lastSummary}
+              </p>
+            )}
+            {aiEdit.lastError && (
+              <p className="mt-0.5 text-[10px] text-danger" title={aiEdit.lastError}>
+                错误: {aiEdit.lastError}
+              </p>
+            )}
+          </div>
         </div>
       )}
     </CollapseSection>
