@@ -39,6 +39,7 @@ import {
   type VectorGeometryType,
 } from '@/core/layers/model'
 import { DEFAULT_PALETTE, type LayerStyle } from '@/core/style/types'
+import PythonAnalysisSection from './PythonAnalysisSection'
 
 /** 各算子一行简短说明 */
 const OP_HINTS: Record<AnalysisOp['op'], string> = {
@@ -414,6 +415,8 @@ export default function AnalysisPanel() {
           {error}
         </div>
       )}
+
+      <PythonAnalysisSection />
 
       <CollapseSection title={`历史记录（${history.length}）`} defaultOpen={false}>
         {history.length === 0 ? (
